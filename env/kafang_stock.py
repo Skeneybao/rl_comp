@@ -163,10 +163,11 @@ class KaFangStock(Game):
         try:
             obs,done,info = self.env_core_list[self.current_game].step(decoded_order)
         except ValueError as v:
-            print(f'Current game terminate early due to error {v}')
-            done = True
-            obs = {}
-            info = None
+            raise ValueError(f'Current game terminate early', v)
+            # print(f'Current game terminate early due to error {v}')
+            # done = True
+            # obs = {}
+            # info = None
 
         # self.all_observes = [obs]
         self.step_cnt += 1
