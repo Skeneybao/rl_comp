@@ -23,7 +23,8 @@ def run_actor(
     state = game.reset_game()
     while not game.done:
         action, model_input, model_output = model_wrapper.wrap_inference_single(state)
-        next_state, _, done, _, _ = game.step([action])
+        valid_action, is_invalid = validate_action(state, action)
+        next_state, _, done, _, _ = game.step([valid_action])
         reward = reward_fn(state, action)
         replay_buffer.push(state, action, reward, next_state, done)
         state = next_state
