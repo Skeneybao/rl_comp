@@ -48,6 +48,10 @@ def validate_action(state: List[Dict], action: Tuple[List, List, List]):
                     vol = sum(ask_volumes[:i + 1])
                     is_invalid = True
                 break
+        else:
+            if price > ask_prices[-1] and vol > sum(ask_volumes):
+                vol = sum(ask_volumes)
+                is_invalid = True
 
     elif side[2] == 1:  # Sell
         # Check for min position limit
@@ -66,6 +70,10 @@ def validate_action(state: List[Dict], action: Tuple[List, List, List]):
                     vol = sum(bid_volumes[:i + 1])
                     is_invalid = True
                 break
+        else:
+            if price < bid_prices[-1] and vol > sum(bid_volumes):
+                vol = sum(bid_volumes)
+                is_invalid = True
 
     if vol == 0:
         side = [0, 1, 0]

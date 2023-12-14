@@ -46,12 +46,19 @@ class UtilTestCase(unittest.TestCase):
             [[1, 0, 0], [1000], [4614]],
         ]
 
-        for side, vol, price in test_data:
-            val_side, val_vol, val_price = side, vol, price
+        expected_data = [
+            [[0, 0, 1], [1], [4583.164]],
+            [[0, 1, 0], [0], [0]],
+            [[0, 0, 1], [42], [4583.164]],
+            [[1, 0, 0], [25], [4614]],
+        ]
+
+        for i, ((side, vol, price), (exp_side, exp_vol, exp_price)) in enumerate(zip(test_data, expected_data)):
             (side, vol, price), _ = validate_action(state, (side, vol, price))
-            self.assertEqual(side, val_side)
-            self.assertEqual(vol, val_vol)
-            self.assertEqual(price, val_price)
+            fail_mesg = f'\nFailed on {i}, expected {exp_side, exp_vol, exp_price}, got {side, vol, price}'
+            self.assertEqual(side, exp_side, msg=fail_mesg)
+            self.assertEqual(vol, exp_vol, msg=fail_mesg)
+            self.assertEqual(price, exp_price, msg=fail_mesg)
 
 
 if __name__ == '__main__':
