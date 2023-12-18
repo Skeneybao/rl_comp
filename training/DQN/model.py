@@ -9,14 +9,14 @@ ActionType = Tuple[list, list, list]
 
 
 @dataclass
-class ActorConfig:
+class ActorModelConfig:
     input_dim: int
     hidden_dim: int
     output_dim: int
 
 
-class Actor(nn.Module):
-    def __init__(self, config: ActorConfig):
+class ActorModel(nn.Module):
+    def __init__(self, config: ActorModelConfig):
         super().__init__()
         self.fc1 = nn.Linear(config.input_dim, config.hidden_dim)
         self.relu = nn.ReLU()
