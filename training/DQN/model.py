@@ -29,12 +29,15 @@ class ActorModel(nn.Module):
 
 
 class ModelIOWrapper:
+    """
+    wrap model's output into action that can be used by the environment
+    """
     buy_side = [1, 0, 0]
     sell_side = [0, 0, 1]
     noop_side = [0, 1, 0]
     vol = 1
 
-    def __init__(self, model):
+    def __init__(self, model: nn.Module):
         self.model = model
 
     def action_id_to_action(self, action_id, info):
@@ -65,16 +68,18 @@ class ModelIOWrapper:
             raise ValueError('model output should between [0, 11)')
         return action
 
+    @staticmethod
+    def state2input(state):
+        return torch.tensor(list(state[-1]['observation'].values()))
+
     def wrap_inference_single(self, state) -> Tuple[ActionType, torch.tensor, torch.tensor]:
-        # public info
-        info = state[-1]['observation']
         # 0. preprocess into
-        model_input = torch.tensor(list(info.values()))
+        model_input = self.state2input(state)
         # 1. inference
         with torch.no_grad():
             model_output = self.model(model_input)
         # 2. postprocess output
-        action = self.action_id_to_action(model_output.argmax(-1).item(), info)
+        action = self.action_id_to_action(model_output.argmax(-1).item(), state[-1]['observation'])
 
         return action, model_input, model_output
 
@@ -82,4 +87,7 @@ class ModelIOWrapper:
         info = state[-1]['observation']
         action_id = random.randrange(0, 11)
         action = self.action_id_to_action(action_id, info)
-        return action
+        model_input = self.state2input(state)
+        model_output = torch.zeros(11, dtype=torch.float)
+        model_output[action_id] = 1
+        return action, model_input, model_output

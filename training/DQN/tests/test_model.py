@@ -65,7 +65,8 @@ class ModelIOWrapperTest(unittest.TestCase):
         actions = []
         iters = 10000
         for i in range(iters):
-            action = model_io_wrapper.random_action(self.state)
+            action, model_input, model_output = model_io_wrapper.random_action(self.state)
+            self.assertEqual(model_output.size()[0], 11)
             self.assertEqual(len(action), 3)
             self.assertEqual(len(action[0]), 3)
             self.assertEqual(len(action[1]), 1)

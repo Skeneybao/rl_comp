@@ -24,11 +24,11 @@ def if_epsilon_greedy(
         steps_done: int,
 ):
     """
-    Decide whether to use epsilon greedy strategy. If not, use the model to predict the action.
+    Decide whether to use epsilon greedy strategy. If return True, use epsilon greedy strategy.
     """
     sample = random.random()
     eps_threshold = config.eps_end + (config.eps_start - config.eps_end) * math.exp(-1. * steps_done / config.eps_decay)
-    if sample > eps_threshold:
+    if sample < eps_threshold:
         return True
     else:
         return False
@@ -52,12 +52,12 @@ def run_actor(
     state = game.reset_game()
     while not game.done:
         if if_epsilon_greedy(config, counter.steps_done):
-            action = model_wrapper.random_action(state)
+            action, model_input, model_output = model_wrapper.random_action(state)
         else:
-            action, _, _ = model_wrapper.wrap_inference_single(state)
+            action, model_input, model_output = model_wrapper.wrap_inference_single(state)
         valid_action, is_invalid = validate_action(state, action)
         next_state, _, done, _, _ = game.step([valid_action])
         reward = reward_fn(state, action)
-        replay_buffer.push(state, action, reward, next_state, done)
+        replay_buffer.push([state, action, reward, next_state, done, model_input, model_output])
         state = next_state
         counter.steps_done += 1
