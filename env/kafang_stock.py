@@ -187,7 +187,7 @@ class KaFangStock(Game):
             self.compute_final_stats()
             self.set_n_return()
 
-        return self.all_observes, 0, done, info_before, ''
+        return self.all_observes, 0, done, info, ''
 
     def is_terminal(self):
         return self.done
