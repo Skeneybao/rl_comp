@@ -4,7 +4,7 @@ from env.chooseenv import make
 from training.DQN.actor import run_actor, ActorConfig
 from training.DQN.counter import Counter
 from training.DQN.learner import DQNLearner, LearnerConfig
-from training.DQN.model import ActorModel, ActorModelConfig, ModelIOWrapper
+from training.DQN.model import Model, ModelConfig, Actor
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.reward.dummy_reward import cal_reward as dummy_reward
 
@@ -15,8 +15,8 @@ class LearnerTestCase(unittest.TestCase):
         return make('kafang_stock', seed=None)
 
     def test_optimize(self):
-        model = ActorModel(ActorModelConfig(28, 64, 11))
-        model_io_wrapper = ModelIOWrapper(model)
+        model = Model(ModelConfig(28, 64, 11))
+        model_io_wrapper = Actor(model)
         replay_buffer = ReplayBuffer(1024)
         learner = DQNLearner(
             LearnerConfig(),
@@ -33,8 +33,8 @@ class LearnerTestCase(unittest.TestCase):
         self.assertGreater(losses[0], losses[-1])
 
     def test_update_target_model(self):
-        model = ActorModel(ActorModelConfig(28, 64, 11))
-        model_io_wrapper = ModelIOWrapper(model)
+        model = Model(ModelConfig(28, 64, 11))
+        model_io_wrapper = Actor(model)
         replay_buffer = ReplayBuffer(1024)
         learner_config = LearnerConfig()
         learner = DQNLearner(

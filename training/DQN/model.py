@@ -9,14 +9,14 @@ ActionType = Tuple[list, list, list]
 
 
 @dataclass
-class ActorModelConfig:
+class ModelConfig:
     input_dim: int
     hidden_dim: int
     output_dim: int
 
 
-class ActorModel(nn.Module):
-    def __init__(self, config: ActorModelConfig):
+class Model(nn.Module):
+    def __init__(self, config: ModelConfig):
         super().__init__()
         self.fc1 = nn.Linear(config.input_dim, config.hidden_dim)
         self.relu = nn.ReLU()
@@ -28,7 +28,7 @@ class ActorModel(nn.Module):
         return x
 
 
-class ModelIOWrapper:
+class Actor:
     """
     wrap model's output into action that can be used by the environment
     """

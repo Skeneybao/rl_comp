@@ -5,7 +5,7 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 
-from training.DQN.model import ModelIOWrapper
+from training.DQN.model import Actor
 from training.replay.ReplayBuffer import ReplayBuffer
 
 
@@ -19,7 +19,7 @@ class LearnerConfig:
 
 
 class DQNLearner:
-    def __init__(self, config: LearnerConfig, model_wrapper: ModelIOWrapper, replay_buffer: ReplayBuffer):
+    def __init__(self, config: LearnerConfig, model_wrapper: Actor, replay_buffer: ReplayBuffer):
         self.config = config
         self.model_wrapper = model_wrapper
         self.replay_buffer = replay_buffer

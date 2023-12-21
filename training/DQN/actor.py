@@ -6,7 +6,7 @@ import math
 
 from env.kafang_stock import KaFangStock
 from training.DQN.counter import Counter
-from training.DQN.model import ModelIOWrapper, ActionType
+from training.DQN.model import Actor, ActionType
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.reward import dummy_reward
 from training.util.validate_action import validate_action
@@ -36,7 +36,7 @@ def if_epsilon_greedy(
 
 def run_actor(
         new_game_fn: Callable[[], KaFangStock],
-        model_wrapper: ModelIOWrapper,
+        actor: Actor,
         replay_buffer: ReplayBuffer,
         counter: Counter,
         config: ActorConfig,
@@ -52,9 +52,9 @@ def run_actor(
     state = game.reset_game()
     while not game.done:
         if if_epsilon_greedy(config, counter.steps_done):
-            action, model_input, model_output = model_wrapper.random_action(state)
+            action, model_input, model_output = actor.random_action(state)
         else:
-            action, model_input, model_output = model_wrapper.wrap_inference_single(state)
+            action, model_input, model_output = actor.wrap_inference_single(state)
         valid_action, is_invalid = validate_action(state, action)
         next_state, _, done, post_info, _ = game.step([valid_action])
         reward = reward_fn(state, action)

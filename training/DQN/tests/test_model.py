@@ -1,6 +1,6 @@
 import unittest
 
-from training.DQN.model import ActorModelConfig, ActorModel, ModelIOWrapper
+from training.DQN.model import ModelConfig, Model, Actor
 
 
 class ModelIOWrapperTest(unittest.TestCase):
@@ -36,8 +36,8 @@ class ModelIOWrapperTest(unittest.TestCase):
 
     def test_inference(self):
         for i in range(100):
-            model = ActorModel(ActorModelConfig(28, 64, 11))
-            model_io_wrapper = ModelIOWrapper(model)
+            model = Model(ModelConfig(28, 64, 11))
+            model_io_wrapper = Actor(model)
             action, model_input, model_output = model_io_wrapper.wrap_inference_single(self.state)
             self.assertEqual(len(action), 3)
             self.assertEqual(len(action[0]), 3)
@@ -60,8 +60,8 @@ class ModelIOWrapperTest(unittest.TestCase):
                 self.assertEqual(action[2][0], price)
 
     def test_random_action(self):
-        model = ActorModel(ActorModelConfig(28, 64, 11))
-        model_io_wrapper = ModelIOWrapper(model)
+        model = Model(ModelConfig(28, 64, 11))
+        model_io_wrapper = Actor(model)
         actions = []
         iters = 10000
         for i in range(iters):

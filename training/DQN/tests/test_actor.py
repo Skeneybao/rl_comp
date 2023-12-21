@@ -5,7 +5,7 @@ import math
 from env.chooseenv import make
 from training.DQN.actor import run_actor, ActorConfig, if_epsilon_greedy
 from training.DQN.counter import Counter
-from training.DQN.model import ActorModel, ActorModelConfig, ModelIOWrapper
+from training.DQN.model import Model, ModelConfig, Actor
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.reward.dummy_reward import cal_reward as dummy_reward
 
@@ -30,9 +30,9 @@ class ActorTestCase(unittest.TestCase):
             self.assertAlmostEqual(prob, expected_prob, delta=0.005)
 
     def test_run_actor(self):
-        model = ActorModel(ActorModelConfig(28, 64, 11))
+        model = Model(ModelConfig(28, 64, 11))
         actor_config = ActorConfig(0.9, 0.05, 1000)
-        model_io_wrapper = ModelIOWrapper(model)
+        model_io_wrapper = Actor(model)
         replay_buffer = ReplayBuffer(1024)
         counter = Counter()
         run_actor(self.new_game, model_io_wrapper, replay_buffer, counter, actor_config, reward_fn=dummy_reward)
