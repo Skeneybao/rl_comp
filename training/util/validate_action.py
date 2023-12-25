@@ -1,22 +1,21 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict
+
+from training.DQN.model import ActionType
 
 
-def validate_action(state: List[Dict], action: Tuple[List, List, List]):
-    state = state[-1]
+def validate_action(state: Dict, action: ActionType):
     side, vol, price = action
-    vol = vol[0]
-    price = price[0]
 
     # Extract data from the state
-    ask_prices = [state['observation']['ap0'], state['observation']['ap1'], state['observation']['ap2'],
-                  state['observation']['ap3'], state['observation']['ap4']]
-    bid_prices = [state['observation']['bp0'], state['observation']['bp1'], state['observation']['bp2'],
-                  state['observation']['bp3'], state['observation']['bp4']]
-    ask_volumes = [state['observation']['av0'], state['observation']['av1'], state['observation']['av2'],
-                   state['observation']['av3'], state['observation']['av4']]
-    bid_volumes = [state['observation']['bv0'], state['observation']['bv1'], state['observation']['bv2'],
-                   state['observation']['bv3'], state['observation']['bv4']]
-    code_net_position = state['observation']['code_net_position']
+    ask_prices = [state['ap0'], state['ap1'], state['ap2'],
+                  state['ap3'], state['ap4']]
+    bid_prices = [state['bp0'], state['bp1'], state['bp2'],
+                  state['bp3'], state['bp4']]
+    ask_volumes = [state['av0'], state['av1'], state['av2'],
+                   state['av3'], state['av4']]
+    bid_volumes = [state['bv0'], state['bv1'], state['bv2'],
+                   state['bv3'], state['bv4']]
+    code_net_position = state['code_net_position']
 
     # Constants
     MAX_POSITION = 300
@@ -31,7 +30,7 @@ def validate_action(state: List[Dict], action: Tuple[List, List, List]):
         is_invalid = True
 
     # Handle different sides
-    if side[0] == 1:  # Buy
+    if side == 0:  # Buy
         # Check for max position limit
         if code_net_position + vol > MAX_POSITION:
             vol = MAX_POSITION - code_net_position
@@ -53,7 +52,7 @@ def validate_action(state: List[Dict], action: Tuple[List, List, List]):
                 vol = sum(ask_volumes)
                 is_invalid = True
 
-    elif side[2] == 1:  # Sell
+    elif side == 2:  # Sell
         # Check for min position limit
         if code_net_position - vol < MIN_POSITION:
             vol = code_net_position - MIN_POSITION
@@ -76,7 +75,7 @@ def validate_action(state: List[Dict], action: Tuple[List, List, List]):
                 is_invalid = True
 
     if vol == 0:
-        side = [0, 1, 0]
-        price = 0
+        side = 1
+        price = 0.
 
-    return (side, [vol], [price]), is_invalid
+    return (side, vol, price), is_invalid

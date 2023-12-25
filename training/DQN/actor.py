@@ -1,14 +1,15 @@
 import random
 from dataclasses import dataclass
-from typing import Callable, Dict
+from typing import Callable
 
 import math
+import torch
+from torch import nn
 
-from env.kafang_stock import KaFangStock
-from training.DQN.counter import Counter
-from training.DQN.model import Actor, ActionType
+from training.DQN.model import ModelOutputWrapper
+from training.env.featureEngine import FeatureEngine
+from training.env.trainingEnv import TrainingStockEnv
 from training.replay.ReplayBuffer import ReplayBuffer
-from training.reward import dummy_reward
 from training.util.validate_action import validate_action
 
 
@@ -34,30 +35,35 @@ def if_epsilon_greedy(
         return False
 
 
-def run_actor(
-        new_game_fn: Callable[[], KaFangStock],
-        actor: Actor,
-        replay_buffer: ReplayBuffer,
-        counter: Counter,
-        config: ActorConfig,
-        *,
-        reward_fn: Callable[[Dict, ActionType], float] = dummy_reward.cal_reward
-):
-    """
-    Run an episode of the game, and store the experience in the replay buffer.
-    """
+class Actor:
+    def __init__(
+            self,
+            new_env_fn: Callable[[], TrainingStockEnv],
+            feature_engine: FeatureEngine,
+            output_wrapper: ModelOutputWrapper,
+            model: nn.Module,
+            replay_buffer: ReplayBuffer,
+            config: ActorConfig,
+    ):
+        self.env = new_env_fn()
+        self.this_state, _, _ = self.env.reset()
+        self.feature_engine = feature_engine
+        self.model = model
+        self.output_wrapper = output_wrapper
+        self.replay_buffer = replay_buffer
+        self.config = config
 
-    game = new_game_fn()
-
-    state = game.reset_game()
-    while not game.done:
-        if if_epsilon_greedy(config, counter.steps_done):
-            action, model_input, model_output = actor.random_action(state)
+    def step(self):
+        state = self.this_state
+        model_input = self.feature_engine.get_feature(state)
+        if if_epsilon_greedy(self.config, self.env.step_cnt):
+            action, model_input, model_output = self.output_wrapper.random_action(state, model_input)
         else:
-            action, model_input, model_output = actor.wrap_inference_single(state)
+            action, model_input, model_output = self.output_wrapper.select_action(
+                self.model, state, model_input)
+
         valid_action, is_invalid = validate_action(state, action)
-        next_state, _, done, post_info, _ = game.step([valid_action])
-        reward = reward_fn(state, action)
-        replay_buffer.push([state, action, reward, next_state, done, model_input, model_output])
-        state = next_state
-        counter.steps_done += 1
+        next_state, reward, done = self.env.step(valid_action)
+        next_model_input = self.feature_engine.get_feature(next_state)
+        self.replay_buffer.push([state, action, reward, next_state, done, model_input, model_output, next_model_input])
+        self.this_state = next_state

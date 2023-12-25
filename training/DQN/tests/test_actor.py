@@ -2,19 +2,21 @@ import unittest
 
 import math
 
-from env.chooseenv import make
-from training.DQN.actor import run_actor, ActorConfig, if_epsilon_greedy
-from training.DQN.counter import Counter
-from training.DQN.model import Model, ModelConfig, Actor
+from training.DQN.actor import ActorConfig, if_epsilon_greedy, Actor
+from training.DQN.model import Action11OutputWrapper
+from training.env.featureEngine import FeatureEngineDummy
+from training.env.trainingEnv import TrainingStockEnv
+from training.model.DNN import DNNModelConfig, DNN
 from training.replay.ReplayBuffer import ReplayBuffer
-from training.reward.dummy_reward import cal_reward as dummy_reward
+
+
 
 
 class ActorTestCase(unittest.TestCase):
 
     @staticmethod
     def new_game():
-        return make('kafang_stock', seed=None)
+        return TrainingStockEnv()
 
     def test_epsilon_greedy(self):
         config = ActorConfig(0.9, 0.05, 1000)
@@ -30,21 +32,58 @@ class ActorTestCase(unittest.TestCase):
             self.assertAlmostEqual(prob, expected_prob, delta=0.005)
 
     def test_run_actor(self):
-        model = Model(ModelConfig(28, 64, 11))
+        feature_engine = FeatureEngineDummy()
+        model_output_wrapper = Action11OutputWrapper()
+        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], model_output_wrapper.get_output_shape()))
         actor_config = ActorConfig(0.9, 0.05, 1000)
-        model_io_wrapper = Actor(model)
         replay_buffer = ReplayBuffer(1024)
-        counter = Counter()
-        run_actor(self.new_game, model_io_wrapper, replay_buffer, counter, actor_config, reward_fn=dummy_reward)
+        actor = Actor(
+            self.new_game,
+            feature_engine,
+            model_output_wrapper,
+            model,
+            replay_buffer,
+            actor_config,
+        )
 
-        self.assertTrue(0 < len(replay_buffer.memory) <= 1024)
-        self.assertTrue(len([1 for _, _, _, _, done, _, _ in replay_buffer.memory if done == 2]) == 1)
+        # actor should insert into replay buffer
+        for _ in range(10):
+            actor.step()
+        self.assertTrue(len(replay_buffer.memory) == 10)
 
+        for _ in range(1024 - 10):
+            actor.step()
+        self.assertTrue(len(replay_buffer.memory) == 1024)
+
+        for _ in range(100):
+            actor.step()
+        self.assertTrue(len(replay_buffer.memory) == 1024)
+
+        # all random should not fail
         all_random_config = ActorConfig(1, 1, 1)
-        run_actor(self.new_game, model_io_wrapper, replay_buffer, counter, all_random_config, reward_fn=dummy_reward)
+        actor = Actor(
+            self.new_game,
+            feature_engine,
+            model_output_wrapper,
+            model,
+            replay_buffer,
+            all_random_config,
+        )
+        for _ in range(1024):
+            actor.step()
 
+        # all model should not fail
         all_model_config = ActorConfig(0, 0, 1)
-        run_actor(self.new_game, model_io_wrapper, replay_buffer, counter, all_model_config, reward_fn=dummy_reward)
+        actor = Actor(
+            self.new_game,
+            feature_engine,
+            model_output_wrapper,
+            model,
+            replay_buffer,
+            all_model_config,
+        )
+        for _ in range(1024):
+            actor.step()
 
 
 if __name__ == '__main__':

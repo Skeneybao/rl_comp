@@ -1,12 +1,14 @@
+import abc
 import copy
 from dataclasses import dataclass
 from typing import Optional
 
 import torch
 import torch.nn.functional as F
+from torch import nn
 
-from training.DQN.model import Actor
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.util.torch_device import auto_get_device
 
 
 @dataclass
@@ -16,15 +18,26 @@ class LearnerConfig:
     tau: float = 0.005
     lr: float = 1e-4
     optimizer_type = 'SGD'
+    device: torch.device = auto_get_device()
 
 
-class DQNLearner:
-    def __init__(self, config: LearnerConfig, model_wrapper: Actor, replay_buffer: ReplayBuffer):
+class Learner(abc.ABC):
+    @abc.abstractmethod
+    def step(self) -> Optional[float]:
+        pass
+
+
+class DQNLearner(Learner):
+    def __init__(
+            self,
+            config: LearnerConfig,
+            model: nn.Module,
+            replay_buffer: ReplayBuffer,
+    ):
         self.config = config
-        self.model_wrapper = model_wrapper
         self.replay_buffer = replay_buffer
-        self.model = model_wrapper.model
-        self.target_model = copy.deepcopy(model_wrapper.model)
+        self.model = model.to(config.device)
+        self.target_model = copy.deepcopy(model).to(config.device)
         self.optimizer = self.__get_optimizer()
 
     def __get_optimizer(self):
@@ -38,7 +51,7 @@ class DQNLearner:
             raise ValueError(f'Unknown optimizer type: {self.config.optimizer_type}')
         return optimizer
 
-    def run_optimize_step(self) -> Optional[float]:
+    def step(self) -> Optional[float]:
         """
         Run a single optimization step of a batch.
         """
@@ -46,15 +59,13 @@ class DQNLearner:
             return None
 
         transitions = self.replay_buffer.sample(self.config.batch_size)
-        states, actions, rewards, next_states, dones, model_inputs, model_outputs = zip(*transitions)
+        states, actions, rewards, next_states, dones, model_inputs, model_outputs, next_model_inputs = zip(*transitions)
 
-        next_inputs = [self.model_wrapper.state2input(state) for state in next_states]
-
-        state_batch = torch.stack(model_inputs)
-        action_batch = torch.stack(model_outputs).argmax(1).unsqueeze(1)
-        reward_batch = torch.tensor(rewards)
-        next_state_batch = torch.stack(next_inputs)
-        done_batch = torch.tensor(dones)
+        state_batch = torch.stack(model_inputs).to(self.config.device)
+        action_batch = torch.stack(model_outputs).argmax(1).unsqueeze(1).to(self.config.device)
+        reward_batch = torch.tensor(rewards).to(self.config.device)
+        next_state_batch = torch.stack(next_model_inputs).to(self.config.device)
+        done_batch = torch.tensor(dones).to(self.config.device)
 
         non_final_mask = done_batch != 0
         non_final_next_states = next_state_batch[non_final_mask]
@@ -63,7 +74,7 @@ class DQNLearner:
         state_action_values = self.model(state_batch).gather(1, action_batch)
 
         # V(s_{t+1}) = max_a Q(s_{t+1}, a)
-        next_state_values = torch.zeros(self.config.batch_size)
+        next_state_values = torch.zeros(self.config.batch_size, device=self.config.device)
         with torch.no_grad():
             next_state_values[non_final_mask] = self.target_model(non_final_next_states).max(1)[0].detach()
         # expected Q values

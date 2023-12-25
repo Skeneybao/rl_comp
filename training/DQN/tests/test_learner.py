@@ -1,45 +1,59 @@
 import unittest
 
 from env.chooseenv import make
-from training.DQN.actor import run_actor, ActorConfig
-from training.DQN.counter import Counter
+from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import DQNLearner, LearnerConfig
-from training.DQN.model import Model, ModelConfig, Actor
+from training.DQN.model import Action11OutputWrapper
+from training.env.featureEngine import FeatureEngineDummy
+from training.env.trainingEnv import TrainingStockEnv
+from training.model.DNN import DNNModelConfig, DNN
 from training.replay.ReplayBuffer import ReplayBuffer
-from training.reward.dummy_reward import cal_reward as dummy_reward
 
 
 class LearnerTestCase(unittest.TestCase):
     @staticmethod
     def new_game():
-        return make('kafang_stock', seed=None)
+        return TrainingStockEnv()
 
     def test_optimize(self):
-        model = Model(ModelConfig(28, 64, 11))
-        model_io_wrapper = Actor(model)
+        feature_engine = FeatureEngineDummy()
+        model_output_wrapper = Action11OutputWrapper()
+        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], model_output_wrapper.get_output_shape()))
         replay_buffer = ReplayBuffer(1024)
+
+        actor_config = ActorConfig(0.9, 0.05, 1000)
+        actor = Actor(
+            self.new_game,
+            feature_engine,
+            model_output_wrapper,
+            model,
+            replay_buffer,
+            actor_config,
+        )
+        # gather training data
+        for _ in range(1024):
+            actor.step()
+
+        learner_config = LearnerConfig()
         learner = DQNLearner(
-            LearnerConfig(),
-            model_io_wrapper,
+            learner_config,
+            model,
             replay_buffer
         )
-        counter = Counter()
 
-        run_actor(self.new_game, model_io_wrapper, replay_buffer, counter, ActorConfig(0.9, 0.05, 1000),
-                  reward_fn=dummy_reward)
-
-        losses = [learner.run_optimize_step() for _ in range(100)]
+        losses = [learner.step() for _ in range(100)]
 
         self.assertGreater(losses[0], losses[-1])
 
     def test_update_target_model(self):
-        model = Model(ModelConfig(28, 64, 11))
-        model_io_wrapper = Actor(model)
+        feature_engine = FeatureEngineDummy()
+        model_output_wrapper = Action11OutputWrapper()
+        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], model_output_wrapper.get_output_shape()))
         replay_buffer = ReplayBuffer(1024)
         learner_config = LearnerConfig()
         learner = DQNLearner(
             learner_config,
-            model_io_wrapper,
+            model,
             replay_buffer
         )
 
