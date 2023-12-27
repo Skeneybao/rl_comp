@@ -59,13 +59,13 @@ class DQNLearner(Learner):
             return None
 
         transitions = self.replay_buffer.sample(self.config.batch_size)
-        states, actions, rewards, next_states, dones, model_inputs, model_outputs, next_model_inputs = zip(*transitions)
+        state, model_output, reward, next_state, done = zip(*transitions)
 
-        state_batch = torch.stack(model_inputs).to(self.config.device)
-        action_batch = torch.stack(model_outputs).argmax(1).unsqueeze(1).to(self.config.device)
-        reward_batch = torch.tensor(rewards).to(self.config.device)
-        next_state_batch = torch.stack(next_model_inputs).to(self.config.device)
-        done_batch = torch.tensor(dones).to(self.config.device)
+        state_batch = torch.stack(state).to(self.config.device)
+        action_batch = torch.stack(model_output).argmax(1).unsqueeze(1).to(self.config.device)
+        reward_batch = torch.tensor(reward).to(self.config.device)
+        next_state_batch = torch.stack(next_state).to(self.config.device)
+        done_batch = torch.tensor(done).to(self.config.device)
 
         non_final_mask = done_batch != 0
         non_final_next_states = next_state_batch[non_final_mask]

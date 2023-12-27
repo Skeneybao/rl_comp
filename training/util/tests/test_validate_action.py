@@ -5,7 +5,7 @@ from training.util.validate_action import validate_action
 
 class UtilTestCase(unittest.TestCase):
     def test_validate_action(self):
-        state = {
+        obs = {
             'serverTime': 93004818.0,
             'eventTime': 93004880.0,
             'code': 2.0,
@@ -51,7 +51,7 @@ class UtilTestCase(unittest.TestCase):
         ]
 
         for i, ((side, vol, price), (exp_side, exp_vol, exp_price)) in enumerate(zip(test_data, expected_data)):
-            (side, vol, price), _ = validate_action(state, (side, vol, price))
+            (side, vol, price), _ = validate_action(obs, (side, vol, price))
             fail_mesg = f'\nFailed on {i}, expected {exp_side, exp_vol, exp_price}, got {side, vol, price}'
             self.assertEqual(side, exp_side, msg=fail_mesg)
             self.assertEqual(vol, exp_vol, msg=fail_mesg)

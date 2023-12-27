@@ -3,19 +3,19 @@ from typing import List, Dict
 from training.DQN.model import ActionType
 
 
-def validate_action(state: Dict, action: ActionType):
+def validate_action(obs: Dict, action: ActionType):
     side, vol, price = action
 
     # Extract data from the state
-    ask_prices = [state['ap0'], state['ap1'], state['ap2'],
-                  state['ap3'], state['ap4']]
-    bid_prices = [state['bp0'], state['bp1'], state['bp2'],
-                  state['bp3'], state['bp4']]
-    ask_volumes = [state['av0'], state['av1'], state['av2'],
-                   state['av3'], state['av4']]
-    bid_volumes = [state['bv0'], state['bv1'], state['bv2'],
-                   state['bv3'], state['bv4']]
-    code_net_position = state['code_net_position']
+    ask_prices = [obs['ap0'], obs['ap1'], obs['ap2'],
+                  obs['ap3'], obs['ap4']]
+    bid_prices = [obs['bp0'], obs['bp1'], obs['bp2'],
+                  obs['bp3'], obs['bp4']]
+    ask_volumes = [obs['av0'], obs['av1'], obs['av2'],
+                   obs['av3'], obs['av4']]
+    bid_volumes = [obs['bv0'], obs['bv1'], obs['bv2'],
+                   obs['bv3'], obs['bv4']]
+    code_net_position = obs['code_net_position']
 
     # Constants
     MAX_POSITION = 300
