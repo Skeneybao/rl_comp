@@ -42,12 +42,13 @@ class ModelOutputWrapperTest(unittest.TestCase):
            'day_handling_fee': 0.0}
 
     def test_inference(self):
+        feature_engine = FeatureEngineDummy()
+        model = DNN(
+            DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model_output_wrapper = Action11OutputWrapper(model)
         for i in range(100):
-            feature_engine = FeatureEngineDummy()
-            model_output_wrapper = Action11OutputWrapper()
-            model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], model_output_wrapper.get_output_shape()))
             action, model_input, model_output = model_output_wrapper.select_action(
-                model, self.obs, feature_engine.get_feature(self.obs))
+                self.obs, feature_engine.get_feature(self.obs))
             self.assertEqual(len(action), 3)
             self.assertIn(action[0], [0, 1, 2])
             action_id = model_output.argmax(-1).item()
@@ -66,12 +67,15 @@ class ModelOutputWrapperTest(unittest.TestCase):
                 self.assertEqual(action[2], price)
 
     def test_random_action(self):
-        model_io_wrapper = Action11OutputWrapper()
+        feature_engine = FeatureEngineDummy()
+        model = DNN(
+            DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model_output_wrapper = Action11OutputWrapper(model)
         actions = []
         iters = 10000
         for i in range(iters):
             feature_engine = FeatureEngineDummy()
-            action, model_input, model_output = model_io_wrapper.random_action(
+            action, model_input, model_output = model_output_wrapper.random_action(
                 self.obs, feature_engine.get_feature(self.obs))
             self.assertEqual(model_output.size()[0], 11)
             self.assertEqual(len(action), 3)

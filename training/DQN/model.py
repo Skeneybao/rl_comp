@@ -10,13 +10,24 @@ ActionType = Tuple[int, float, float]
 
 
 class ModelOutputWrapper(abc.ABC):
+
+    def __init__(self, model: nn.Module, refresh_model_steps: int = 32):
+        self.model_base = model
+        self.model = deepcopy(model).to('cpu')
+        self.refresh_model_steps = refresh_model_steps
+        self._refresh_count = 0
+
+    def refresh_model(self):
+        target_params = self.model_base.state_dict()
+        self.model.load_state_dict(target_params)
+
+    @staticmethod
     @abc.abstractmethod
-    def get_output_shape(self):
+    def get_output_shape():
         pass
 
     @abc.abstractmethod
-    def select_action(self, model: nn.Module, observation, model_input: torch.tensor) -> Tuple[
-        ActionType, torch.tensor, torch.tensor]:
+    def select_action(self, observation, model_input: torch.tensor) -> Tuple[ActionType, torch.tensor, torch.tensor]:
         pass
 
     @abc.abstractmethod
@@ -30,7 +41,8 @@ class Action11OutputWrapper(ModelOutputWrapper):
     sell_side = 2
     vol = 1.
 
-    def get_output_shape(self):
+    @staticmethod
+    def get_output_shape():
         return 11
 
     def action_id_to_action(self, action_id, info) -> ActionType:
@@ -61,18 +73,16 @@ class Action11OutputWrapper(ModelOutputWrapper):
             raise ValueError('model output should between [0, 11)')
         return action
 
-    def select_action(
-            self,
-            model: nn.Module,
-            observation,
-            model_input: torch.Tensor
-    ) -> Tuple[ActionType, torch.tensor, torch.tensor]:
+    def select_action(self, observation, model_input: torch.Tensor) -> Tuple[ActionType, torch.tensor, torch.tensor]:
         # 0. inference
-        device = next(model.parameters()).device
         with torch.no_grad():
-            model_output = model(deepcopy(model_input).to(device)).to(model_input.device)
+            model_output = self.model(model_input)
         # 1. postprocess output
         action = self.action_id_to_action(model_output.argmax(-1).item(), observation)
+
+        self._refresh_count += 1
+        if self._refresh_count % self.refresh_model_steps == 0:
+            self.refresh_model()
 
         return action, model_input, model_output
 

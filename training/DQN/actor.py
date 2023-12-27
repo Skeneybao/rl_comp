@@ -59,8 +59,7 @@ class Actor:
         if if_epsilon_greedy(self.config, self.env.step_cnt):
             action, state, model_output = self.output_wrapper.random_action(obs, state)
         else:
-            action, state, model_output = self.output_wrapper.select_action(
-                self.model, obs, state)
+            action, state, model_output = self.output_wrapper.select_action(obs, state)
 
         valid_action, is_invalid = validate_action(obs, action)
         next_obs, reward, done = self.env.step(valid_action)

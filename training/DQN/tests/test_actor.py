@@ -10,8 +10,6 @@ from training.model.DNN import DNNModelConfig, DNN
 from training.replay.ReplayBuffer import ReplayBuffer
 
 
-
-
 class ActorTestCase(unittest.TestCase):
 
     @staticmethod
@@ -33,8 +31,8 @@ class ActorTestCase(unittest.TestCase):
 
     def test_run_actor(self):
         feature_engine = FeatureEngineDummy()
-        model_output_wrapper = Action11OutputWrapper()
-        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], model_output_wrapper.get_output_shape()))
+        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model_output_wrapper = Action11OutputWrapper(model)
         actor_config = ActorConfig(0.9, 0.05, 1000)
         replay_buffer = ReplayBuffer(1024)
         actor = Actor(

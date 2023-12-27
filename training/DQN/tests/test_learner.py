@@ -1,6 +1,5 @@
 import unittest
 
-from env.chooseenv import make
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import DQNLearner, LearnerConfig
 from training.DQN.model import Action11OutputWrapper
@@ -17,8 +16,8 @@ class LearnerTestCase(unittest.TestCase):
 
     def test_optimize(self):
         feature_engine = FeatureEngineDummy()
-        model_output_wrapper = Action11OutputWrapper()
-        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], model_output_wrapper.get_output_shape()))
+        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model_output_wrapper = Action11OutputWrapper(model)
         replay_buffer = ReplayBuffer(1024)
 
         actor_config = ActorConfig(0.9, 0.05, 1000)
@@ -47,8 +46,7 @@ class LearnerTestCase(unittest.TestCase):
 
     def test_update_target_model(self):
         feature_engine = FeatureEngineDummy()
-        model_output_wrapper = Action11OutputWrapper()
-        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], model_output_wrapper.get_output_shape()))
+        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
         replay_buffer = ReplayBuffer(1024)
         learner_config = LearnerConfig()
         learner = DQNLearner(
