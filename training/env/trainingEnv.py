@@ -50,10 +50,10 @@ class TrainingStockEnv(Game):
             self._dateIter = OrderedIterator(dateList)
 
         self._current_env = None
-        self._reset_next_step = None
         self._step_cnt = 0
+        self._step_cnt_except_this_episode = 0
+        # init as 0, for the first batch should be episode 1
         self._episode_cnt = 0
-        self.reset()
         self._train_metric_list = []
 
     def joint_action_space(self):
@@ -65,6 +65,11 @@ class TrainingStockEnv(Game):
     def reset(self):
 
         self._episode_cnt += 1
+
+        try:
+            old_data_len = len(self._parquetFile.data)
+        except AttributeError:
+            old_data_len = 0
 
         date = next(self._dateIter)
         self._parquetFile.filename = os.path.join(TRAIN_DATA_PATH, date)
@@ -79,6 +84,14 @@ class TrainingStockEnv(Game):
         obs, done, info = self._current_env.reset()
         observation = {**obs, **info}
 
+        print(f'reset done, '
+              f'old data length: {old_data_len}, '
+              f'new data length: {len(self._parquetFile.data)}, '
+              f'current step count: {self._step_cnt}, '
+              f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
+
+        self._step_cnt_except_this_episode = self._step_cnt
+
         return observation, 0, 0
 
     def step(self, action):
@@ -88,8 +101,6 @@ class TrainingStockEnv(Game):
         """
 
         self._step_cnt += 1
-        if self._reset_next_step:
-            return self.reset()
 
         order = Order(*action)
 
@@ -100,10 +111,15 @@ class TrainingStockEnv(Game):
 
         reward = self.get_reward()
 
-        if done:
+        if done == 2:
+            # current code is done, reset the current env
+            print(f'debug info: current code is done, reset the current env, dropped obs is: {obs}')
+            obs, _, info = self._current_env.reset()
+        elif done == 1:
+            # current file is done, reset whole thing
             if self._save_train_metric:
                 self._train_metric_list.append(self._current_env.get_backtest_metric)
-            self._reset_next_step = True
+            obs, _, info = self.reset()
 
         observation = {**obs, **info}
 
