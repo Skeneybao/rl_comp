@@ -52,8 +52,8 @@ class TrainingStockEnv(Game):
         self._current_env = None
         self._reset_next_step = None
         self._step_cnt = 0
+        # init as 0, for the first batch should be episode 1
         self._episode_cnt = 0
-        self.reset()
         self._train_metric_list = []
 
     def joint_action_space(self):
@@ -65,6 +65,11 @@ class TrainingStockEnv(Game):
     def reset(self):
 
         self._episode_cnt += 1
+
+        try:
+            old_data_len = len(self._parquetFile.data)
+        except AttributeError:
+            old_data_len = 0
 
         date = next(self._dateIter)
         self._parquetFile.filename = os.path.join(TRAIN_DATA_PATH, date)
@@ -78,6 +83,9 @@ class TrainingStockEnv(Game):
 
         obs, done, info = self._current_env.reset()
         observation = {**obs, **info}
+        self._reset_next_step = False
+
+        print(f'reset done, old data length: {old_data_len}, new data length: {len(self._parquetFile.data)}')
 
         return observation, 0, 0
 
