@@ -9,7 +9,10 @@ CURRENT_PATH = str(Path(__file__).resolve().parent.parent)
 stock_path = os.path.join(CURRENT_PATH, 'env/stock_raw')
 sys.path.append(stock_path)
 
-TRAIN_DATA_PATH = '/mnt/data3/rl-data/股票数据shapeS[20200102-20200224]'
+TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
+TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
+
+TRAIN_DATA_PATH = TRAINING_DATA_5SEC
 
 from env.utils.box import Box
 from env.utils.discrete import Discrete
