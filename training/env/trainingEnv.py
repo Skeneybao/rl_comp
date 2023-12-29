@@ -2,6 +2,7 @@ import os
 import random
 import sys
 from pathlib import Path
+from typing import Callable, Dict
 
 import numpy as np
 
@@ -23,6 +24,7 @@ from env.stock_raw.backtest.utils import ParquetFile
 from env.stock_raw.mock_market_common.mock_market_data_cython import MockMarketDataCython
 from env.stock_raw.envs.stock_base_env_cython import StockBaseEnvCython
 from env.stock_raw.utils import Order
+from training.reward.dummy_reward import cal_reward as dummy_reward
 
 logger = get_logger(__package__)
 
@@ -33,6 +35,7 @@ class TrainingStockEnv(Game):
             self,
             mode='random',  # ['random', 'ordered']
             save_train_metric=True,
+            reward_fn: Callable[[int, Dict, Dict], float] = dummy_reward,
     ):
 
         super(TrainingStockEnv, self).__init__(
@@ -44,6 +47,7 @@ class TrainingStockEnv(Game):
             obs_type=['vector']
         )
 
+        self.reward_fn = reward_fn
         self._save_train_metric = save_train_metric
         self._parquetFile = ParquetFile()
 
@@ -63,6 +67,8 @@ class TrainingStockEnv(Game):
         self._episode_cnt = 0
         self._train_metric_list = []
 
+        self._last_obs = None
+
     def joint_action_space(self):
         return [self.get_single_action_space(0)]
 
@@ -70,9 +76,6 @@ class TrainingStockEnv(Game):
         return [Discrete(3), Box(low=0, high=100, shape=(1,)), Box(low=2000, high=10000, shape=(1,))]
 
     def reset(self):
-
-        self._episode_cnt += 1
-
         try:
             old_data_len = len(self._parquetFile.data)
         except AttributeError:
@@ -90,14 +93,13 @@ class TrainingStockEnv(Game):
 
         obs, done, info = self._current_env.reset()
         observation = {**obs, **info}
+        self._last_obs = observation
 
         logger.info(f'reset done, '
                     f'old data length: {old_data_len}, '
                     f'new data length: {len(self._parquetFile.data)}, '
                     f'current step count: {self._step_cnt}, '
                     f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
-
-        self._step_cnt_except_this_episode = self._step_cnt
 
         return observation, 0, 0
 
@@ -116,24 +118,46 @@ class TrainingStockEnv(Game):
         except ValueError as v:
             raise ValueError(f'Current game terminate early', v)
 
-        reward = self.get_reward()
+        # Get reward
+        # Note that if the game is done in this step, the reward should be calculated based on the last observation of
+        # this episode.
+        # However, based on the handling of done in the following code, the returned observation is the first one of
+        # the next episode, so we use the last observation of the current episode here to calculate the reward.
+        reward = self.get_reward(
+            self._step_cnt - self._step_cnt_except_this_episode,
+            self._last_obs,
+            {**obs, **info}
+        )
 
+        # Handling when done:
+        # 0: not done, 1: done in this file, 2: done for this code of stock
+        # when done, drop the last observation, and reset the current env, finally return the next observation
+        # that is, last_obs = <second last observation of the current file or current code of stock>
+        #          obs = <first observation of the next file or next code of stock>
         if done == 2:
             # current code is done, reset the current env
-            logger.debug(f'current code is done, reset the current env, dropped obs is: {obs}')
+            logger.debug(f'current code is done, reset the current env,'
+                         f'current step count: {self._step_cnt}, '
+                         f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
             obs, _, info = self._current_env.reset()
+            self._step_cnt_except_this_episode = self._step_cnt
+            self._episode_cnt += 1
         elif done == 1:
             # current file is done, reset whole thing
             if self._save_train_metric:
                 self._train_metric_list.append(self._current_env.get_backtest_metric)
             obs, _, info = self.reset()
+            self._step_cnt_except_this_episode = self._step_cnt
+            self._episode_cnt += 1
 
         observation = {**obs, **info}
+        self._last_obs = observation
 
         return observation, reward, done
 
-    def get_reward(self, all_action=None):
-        return 0
+    def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict) -> float:
+        assert obs_after['code'] == obs_before['code']
+        return self.reward_fn(step_this_episode, obs_before, obs_after)
 
     def is_terminal(self):
         return False
