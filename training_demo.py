@@ -5,6 +5,9 @@ from training.env.featureEngine import FeatureEngineDummy
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN, DNNModelConfig
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.util.logger import get_logger
+
+logger = get_logger(__package__)
 
 
 def get_new_game():
@@ -44,7 +47,7 @@ if __name__ == '__main__':
 
         if env.step_cnt % LEARNING_FREQUENCY == 0:
             loss = learner.step()
-            print(f"learner stepping, "
-                  f"current step count: {env.step_cnt}, "
-                  f"current episode count: {env.episode_cnt}, "
-                  f"learning loss: {loss}")
+            logger.info(f"learner stepping, "
+                        f"current step count: {env.step_cnt}, "
+                        f"current episode count: {env.episode_cnt}, "
+                        f"learning loss: {loss}")

@@ -5,11 +5,16 @@ from pathlib import Path
 
 import numpy as np
 
+from training.util.logger import get_logger
+
 CURRENT_PATH = str(Path(__file__).resolve().parent.parent)
 stock_path = os.path.join(CURRENT_PATH, 'env/stock_raw')
 sys.path.append(stock_path)
 
-TRAIN_DATA_PATH = '/mnt/data3/rl-data/股票数据shapeS[20200102-20200224]'
+TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
+TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
+
+TRAIN_DATA_PATH = TRAINING_DATA_5SEC
 
 from env.utils.box import Box
 from env.utils.discrete import Discrete
@@ -18,6 +23,8 @@ from env.stock_raw.backtest.utils import ParquetFile
 from env.stock_raw.mock_market_common.mock_market_data_cython import MockMarketDataCython
 from env.stock_raw.envs.stock_base_env_cython import StockBaseEnvCython
 from env.stock_raw.utils import Order
+
+logger = get_logger(__package__)
 
 
 class TrainingStockEnv(Game):
@@ -84,11 +91,11 @@ class TrainingStockEnv(Game):
         obs, done, info = self._current_env.reset()
         observation = {**obs, **info}
 
-        print(f'reset done, '
-              f'old data length: {old_data_len}, '
-              f'new data length: {len(self._parquetFile.data)}, '
-              f'current step count: {self._step_cnt}, '
-              f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
+        logger.info(f'reset done, '
+                    f'old data length: {old_data_len}, '
+                    f'new data length: {len(self._parquetFile.data)}, '
+                    f'current step count: {self._step_cnt}, '
+                    f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
 
         self._step_cnt_except_this_episode = self._step_cnt
 
@@ -113,7 +120,7 @@ class TrainingStockEnv(Game):
 
         if done == 2:
             # current code is done, reset the current env
-            print(f'debug info: current code is done, reset the current env, dropped obs is: {obs}')
+            logger.debug(f'current code is done, reset the current env, dropped obs is: {obs}')
             obs, _, info = self._current_env.reset()
         elif done == 1:
             # current file is done, reset whole thing
