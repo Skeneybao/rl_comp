@@ -101,7 +101,7 @@ class TrainingStockEnv(Game):
                     f'current step count: {self._step_cnt}, '
                     f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
 
-        return observation, 0, 0
+        return observation, 0, info
 
     def step(self, action):
         """
