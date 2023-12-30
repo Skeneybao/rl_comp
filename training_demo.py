@@ -6,9 +6,7 @@ from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN, DNNModelConfig
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.reward.normalized_net_return import cal_reward
-from training.util.logger import get_logger
-
-logger = get_logger(__package__)
+from training.util.logger import logger
 
 
 def get_new_game():
