@@ -3,7 +3,8 @@ from typing import Dict
 
 def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict) -> float:
     """
-    return empty reward
+    calculate reward by normalized net return
+    reward = ( <code_cash_pnl after step> - <code_cash_pnl before step>) / <ap0_t0>
 
     SPECIAL NOTE on obs_before and obs_after:
     - obs_before contains the observation before the action is taken, while obs_after contains the observation after the
@@ -25,10 +26,9 @@ def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict) -> float:
     - code_net_position: 某支股票每个 step 后的仓位。
     - ap0_t0: 某支股票当天第一个 askPx1。
 
-
     :param steps_done:
     :param obs_before:
     :param obs_after:
     :return:
     """
-    return 0
+    return (obs_after['code_cash_pnl'] - obs_before['code_cash_pnl']) / obs_after['ap0_t0']

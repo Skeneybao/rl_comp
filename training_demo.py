@@ -5,23 +5,24 @@ from training.env.featureEngine import FeatureEngineDummy
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN, DNNModelConfig
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.reward.normalized_net_return import cal_reward
 from training.util.logger import logger
 
 
 def get_new_game():
-    return TrainingStockEnv(mode='ordered')
+    return TrainingStockEnv(mode='ordered', reward_fn=cal_reward)
 
 
 if __name__ == '__main__':
     TRAINING_EPI = 1000
-    LEARNING_FREQUENCY = 16
+    LEARNING_FREQUENCY = 64
 
     feature_engine = FeatureEngineDummy()
     model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
     model_output_wrapper = Action11OutputWrapper(model)
     replay_buffer = ReplayBuffer(1024)
 
-    actor_config = ActorConfig(0.9, 0.05, 1000)
+    actor_config = ActorConfig(0.9, 0.05, 10000)
     actor = Actor(
         get_new_game,
         feature_engine,
