@@ -2,8 +2,8 @@ import logging
 import sys
 
 
-def get_logger(name):
-    logger = logging.getLogger(name)
+def get_logger():
+    logger = logging.getLogger('rl-comp')
     logger.setLevel(logging.DEBUG)  # Capture all levels of log
 
     # Create two handlers: one for stdout and one for stderr
@@ -18,5 +18,8 @@ def get_logger(name):
     stderr_handler.setFormatter(formatter)
 
     logger.addHandler(stdout_handler)
-    logger.addHandler(stderr_handler)
+    # logger.addHandler(stderr_handler)
     return logger
+
+
+logger = get_logger()

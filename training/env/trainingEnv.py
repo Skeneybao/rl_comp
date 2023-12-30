@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from training.util.logger import get_logger
+from training.util.logger import logger
 
 CURRENT_PATH = str(Path(__file__).resolve().parent.parent)
 stock_path = os.path.join(CURRENT_PATH, 'env/stock_raw')
@@ -23,8 +23,6 @@ from env.stock_raw.backtest.utils import ParquetFile
 from env.stock_raw.mock_market_common.mock_market_data_cython import MockMarketDataCython
 from env.stock_raw.envs.stock_base_env_cython import StockBaseEnvCython
 from env.stock_raw.utils import Order
-
-logger = get_logger(__package__)
 
 
 class TrainingStockEnv(Game):

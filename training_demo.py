@@ -5,9 +5,7 @@ from training.env.featureEngine import FeatureEngineDummy
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN, DNNModelConfig
 from training.replay.ReplayBuffer import ReplayBuffer
-from training.util.logger import get_logger
-
-logger = get_logger(__package__)
+from training.util.logger import logger
 
 
 def get_new_game():
