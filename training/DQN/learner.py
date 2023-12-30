@@ -1,5 +1,8 @@
 import abc
 import copy
+import os
+import time
+import uuid
 from dataclasses import dataclass
 from typing import Optional
 
@@ -8,6 +11,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.util.logger import logger
 from training.util.torch_device import auto_get_device
 
 
@@ -19,6 +23,8 @@ class LearnerConfig:
     lr: float = 1e-4
     optimizer_type = 'SGD'
     device: torch.device = auto_get_device()
+    model_save_prefix: str = '/mnt/data3/rl-data/model'
+    model_save_step: int = 1000
 
 
 class Learner(abc.ABC):
@@ -33,12 +39,35 @@ class DQNLearner(Learner):
             config: LearnerConfig,
             model: nn.Module,
             replay_buffer: ReplayBuffer,
+            exp_name: str = None,
     ):
         self.config = config
         self.replay_buffer = replay_buffer
         self.model = model.to(config.device)
         self.target_model = copy.deepcopy(model).to(config.device)
         self.optimizer = self.__get_optimizer()
+        if exp_name is None:
+            # generate name from current time and uuid
+            exp_name = f'{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}-{uuid.uuid4()}'
+        self.exp_name = exp_name
+        self.step_cnt = 0
+
+    def save_model(self, path, model, optimizer=None):
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        if os.path.exists(path):
+            logger.warning(f'File {path} already exists, will overwrite it')
+        torch.save({
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+        }, path)
+
+    def load_model(self, path, model, optimizer=None):
+        checkpoint = torch.load(path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        if optimizer is not None:
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        return model, optimizer
 
     def __get_optimizer(self):
         if self.config.optimizer_type == 'AdamW':
@@ -89,6 +118,13 @@ class DQNLearner(Learner):
         # grad clipping
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 100)
         self.optimizer.step()
+
+        self.step_cnt += 1
+
+        if self.step_cnt % self.config.model_save_step == 0:
+            path = f'{self.config.model_save_prefix}/{self.exp_name}-{self.step_cnt}.pt'
+            logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
+            self.save_model(path, self.model, self.optimizer)
 
         return loss.item()
 
