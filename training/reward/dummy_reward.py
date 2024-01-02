@@ -34,4 +34,19 @@ def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: Actio
     :param action:
     :return:
     """
-    return (obs_after['code_pnl'] - obs_before['code_pnl']) / obs_after['ap0_t0']
+    return obs_after['code_pnl']/ obs_after['ap0_t0']
+
+
+def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+    """
+    :param steps_done:
+    :param obs_before:
+    :param obs_after:
+    :param action:
+    :return:
+    """
+    return 
+
+
+
+
