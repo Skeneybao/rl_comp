@@ -6,6 +6,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
+# side, vol, price
 ActionType = Tuple[int, float, float]
 
 
