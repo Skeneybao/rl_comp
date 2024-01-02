@@ -41,14 +41,12 @@ class Actor:
             new_env_fn: Callable[[], TrainingStockEnv],
             feature_engine: FeatureEngine,
             output_wrapper: ModelOutputWrapper,
-            model: nn.Module,
             replay_buffer: ReplayBuffer,
             config: ActorConfig,
     ):
         self.env = new_env_fn()
         self.this_obs, _, _ = self.env.reset()
         self.feature_engine = feature_engine
-        self.model = model
         self.output_wrapper = output_wrapper
         self.replay_buffer = replay_buffer
         self.config = config
