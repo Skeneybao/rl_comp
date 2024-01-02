@@ -1,7 +1,9 @@
 from typing import Dict
 
+from training.DQN.model import ActionType
 
-def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict) -> float:
+
+def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
     """
     calculate reward by normalized net return
     reward = ( <code_cash_pnl after step> - <code_cash_pnl before step>) / <ap0_t0>
@@ -29,6 +31,7 @@ def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict) -> float:
     :param steps_done:
     :param obs_before:
     :param obs_after:
+    :param action:
     :return:
     """
     return (obs_after['code_cash_pnl'] - obs_before['code_cash_pnl']) / obs_after['ap0_t0']
