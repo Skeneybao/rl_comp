@@ -3,7 +3,7 @@ from typing import List, Dict
 from training.DQN.model import ActionType
 
 
-def validate_action(obs: Dict, action: ActionType):
+def validate_action(obs: Dict, action: ActionType) -> (ActionType, bool):
     side, vol, price = action
 
     # Extract data from the state

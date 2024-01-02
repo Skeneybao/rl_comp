@@ -6,6 +6,7 @@ from typing import Callable, Dict
 
 import numpy as np
 
+from training.DQN.model import ActionType
 from training.util.logger import logger
 
 CURRENT_PATH = str(Path(__file__).resolve().parent.parent)
@@ -33,7 +34,7 @@ class TrainingStockEnv(Game):
             self,
             mode='random',  # ['random', 'ordered']
             save_train_metric=True,
-            reward_fn: Callable[[int, Dict, Dict], float] = dummy_reward,
+            reward_fn: Callable[[int, Dict, Dict, ActionType], float] = dummy_reward,
     ):
 
         super(TrainingStockEnv, self).__init__(
