@@ -102,7 +102,7 @@ class TrainingStockEnv(Game):
 
         return observation, 0, info
 
-    def step(self, action):
+    def step(self, action: ActionType):
         """
         Action format:
         [side, volume, price]
@@ -125,7 +125,8 @@ class TrainingStockEnv(Game):
         reward = self.get_reward(
             self._step_cnt - self._step_cnt_except_this_episode,
             self._last_obs,
-            {**obs, **info}
+            {**obs, **info},
+            action
         )
 
         # Handling when done:
@@ -154,9 +155,9 @@ class TrainingStockEnv(Game):
 
         return observation, reward, done
 
-    def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict) -> float:
+    def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
         assert obs_after['code'] == obs_before['code']
-        return self.reward_fn(step_this_episode, obs_before, obs_after)
+        return self.reward_fn(step_this_episode, obs_before, obs_after, action)
 
     def is_terminal(self):
         return False
