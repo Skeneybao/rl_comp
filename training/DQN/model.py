@@ -1,7 +1,7 @@
 import abc
 import random
 from copy import deepcopy
-from typing import Tuple
+from typing import Tuple, Dict
 
 import torch
 import torch.nn as nn
@@ -46,32 +46,21 @@ class Action11OutputWrapper(ModelOutputWrapper):
     def get_output_shape():
         return 11
 
-    def action_id_to_action(self, action_id, info) -> ActionType:
+    def action_id_to_action(self, action_id: int, obs: Dict) -> ActionType:
         # a4 -> a0 -> b0 -> b4 -> noop
-        if action_id == 0:
-            action = (self.buy_side, self.vol, info['ap4'])
-        elif action_id == 1:
-            action = (self.buy_side, self.vol, info['ap3'])
-        elif action_id == 2:
-            action = (self.buy_side, self.vol, info['ap2'])
-        elif action_id == 3:
-            action = (self.buy_side, self.vol, info['ap1'])
-        elif action_id == 4:
-            action = (self.buy_side, self.vol, info['ap0'])
-        elif action_id == 5:
-            action = (self.sell_side, self.vol, info['bp0'])
-        elif action_id == 6:
-            action = (self.sell_side, self.vol, info['bp1'])
-        elif action_id == 7:
-            action = (self.sell_side, self.vol, info['bp2'])
-        elif action_id == 8:
-            action = (self.sell_side, self.vol, info['bp3'])
-        elif action_id == 9:
-            action = (self.sell_side, self.vol, info['bp4'])
+        if 0 <= action_id < 5:
+            vol = self.vol * (action_id + 1)
+            price = obs['ap4']
+            action = (self.buy_side, vol, price)
+
+        elif 5 <= action_id < 10:
+            vol = self.vol * (action_id - 4)
+            price = obs['bp4']
+            action = (self.sell_side, vol, price)
         elif action_id == 10:
             action = (self.noop_side, 0., 0.)
         else:
-            raise ValueError('model output should between [0, 11)')
+            raise ValueError(f'model output should between [0, {self.get_output_shape()})')
         return action
 
     def select_action(self, observation, model_input: torch.Tensor) -> Tuple[ActionType, torch.tensor, torch.tensor]:
