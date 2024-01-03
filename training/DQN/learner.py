@@ -124,7 +124,7 @@ class DQNLearner(Learner):
         self.step_cnt += 1
 
         if self.step_cnt % self.config.model_save_step == 0:
-            path = f'{self.config.model_save_prefix}/{self.exp_name}-{self.step_cnt}.pt'
+            path = f'{self.config.model_save_prefix}/{self.exp_name}/{self.step_cnt}.pt'
             logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
             self.save_model(path, self.model, self.optimizer)
 

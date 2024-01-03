@@ -14,12 +14,12 @@ class ModelOutputWrapperTest(unittest.TestCase):
            'signal2': 0.44555716043968174,
            'ap0': 2568.042,
            'bp0': 2567.973,
-           'av0': 16.0,
-           'bv0': 47.0,
+           'av0': 1.0,
+           'bv0': 2.0,
            'ap1': 2568.134,
            'bp1': 2567.9500000000003,
            'av1': 5.0,
-           'bv1': 199.0,
+           'bv1': 2.0,
            'ap2': 2568.295,
            'bp2': 2567.812,
            'av2': 10.0,
@@ -62,9 +62,6 @@ class ModelOutputWrapperTest(unittest.TestCase):
                     self.assertEqual(action[0], 0)
                 else:
                     self.assertEqual(action[0], 2)
-                price = self.obs[f'{price_key}']
-                self.assertEqual(action[1], 1)
-                self.assertEqual(action[2], price)
 
     def test_random_action(self):
         feature_engine = FeatureEngineDummy()
@@ -82,9 +79,35 @@ class ModelOutputWrapperTest(unittest.TestCase):
             self.assertIn(action[0], [0, 1, 2])
             actions.append(action)
         for action in ['ap0', 'ap1', 'ap2', 'ap3', 'ap4', 'bp0', 'bp1', 'bp2', 'bp3', 'bp4']:
-            price = self.obs[action]
-            percent = len([action for action in actions if action[2] == price]) / iters
+            percent = len([action for action in actions if action[0] == 1]) / iters
             self.assertAlmostEqual(percent, 1 / 11, delta=0.01, msg=f'random action {action} percent error')
+
+    def test_action_id_to_action(self):
+        feature_engine = FeatureEngineDummy()
+        model = DNN(
+            DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model_output_wrapper = Action11OutputWrapper(model)
+
+        action_ids = list(range(11))
+        exp_action = [
+            (0, 1., 2568.042),
+            (0, 2., 2568.134),
+            (0, 3., 2568.134),
+            (0, 4., 2568.134),
+            (0, 5., 2568.134),
+            (2, 1., 2567.973),
+            (2, 2., 2567.973),
+            (2, 3., 2567.9500000000003),
+            (2, 4., 2567.9500000000003),
+            (2, 5., 2567.812),
+            (1, 0., 0.)
+        ]
+        for action_id, exp in zip(action_ids, exp_action):
+            self.assertEqual(
+                model_output_wrapper.action_id_to_action(action_id, self.obs),
+                exp,
+                f'action_id={action_id}'
+            )
 
 
 if __name__ == '__main__':

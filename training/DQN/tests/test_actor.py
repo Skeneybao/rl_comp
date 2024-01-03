@@ -39,7 +39,6 @@ class ActorTestCase(unittest.TestCase):
             self.new_game,
             feature_engine,
             model_output_wrapper,
-            model,
             replay_buffer,
             actor_config,
         )
@@ -63,7 +62,6 @@ class ActorTestCase(unittest.TestCase):
             self.new_game,
             feature_engine,
             model_output_wrapper,
-            model,
             replay_buffer,
             all_random_config,
         )
@@ -76,7 +74,6 @@ class ActorTestCase(unittest.TestCase):
             self.new_game,
             feature_engine,
             model_output_wrapper,
-            model,
             replay_buffer,
             all_model_config,
         )
