@@ -25,7 +25,7 @@ if __name__ == '__main__':
     feature_engine = FeatureEngineVersion1()
     model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
     model_output_wrapper = Action11OutputWrapper(model)
-    replay_buffer = ReplayBuffer(1e5)
+    replay_buffer = ReplayBuffer(10000)
 
     actor_config = ActorConfig(
         eps_start=0.9,
