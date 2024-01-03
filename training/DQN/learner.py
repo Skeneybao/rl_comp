@@ -25,6 +25,8 @@ class LearnerConfig:
     device: torch.device = auto_get_device()
     model_save_prefix: str = '/mnt/data3/rl-data/model'
     model_save_step: int = 1000
+    # not start training until replay buffer has at least this number of transitions
+    minimal_buffer_size: int = 1000
 
 
 class Learner(abc.ABC):
@@ -84,7 +86,7 @@ class DQNLearner(Learner):
         """
         Run a single optimization step of a batch.
         """
-        if len(self.replay_buffer.memory) < self.config.batch_size:
+        if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
             return None
 
         transitions = self.replay_buffer.sample(self.config.batch_size)
