@@ -21,7 +21,7 @@ class LearnerConfig:
     gamma: float = 0.99
     tau: float = 0.005
     lr: float = 1e-4
-    optimizer_type = 'SGD'
+    optimizer_type: str = 'SGD'
     device: torch.device = auto_get_device()
     model_save_prefix: str = '/mnt/data3/rl-data/model'
     model_save_step: int = 1000
