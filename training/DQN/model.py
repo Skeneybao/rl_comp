@@ -1,8 +1,8 @@
 import abc
+import bisect
 import random
 from copy import deepcopy
 from typing import Tuple, Dict
-import bisect
 
 import numpy as np
 import torch
@@ -56,6 +56,8 @@ class Action11OutputWrapper(ModelOutputWrapper):
             prices = [obs['ap0'], obs['ap1'], obs['ap2'], obs['ap3'], obs['ap4']]
             cum_vol = np.cumsum(vols)
             price_id = bisect.bisect_left(cum_vol, vol)
+            if price_id == len(prices):
+                raise ValueError(f'Tried to buy {vol} shares, but there is not enough shares to buy')
             price = prices[price_id]
             action = (self.buy_side, vol, price)
 
@@ -65,6 +67,8 @@ class Action11OutputWrapper(ModelOutputWrapper):
             prices = [obs['bp0'], obs['bp1'], obs['bp2'], obs['bp3'], obs['bp4']]
             cum_vol = np.cumsum(vols)
             price_id = bisect.bisect_left(cum_vol, vol)
+            if price_id == len(prices):
+                raise ValueError(f'Tried to sell {vol} shares, but there is not enough shares to sell')
             price = prices[price_id]
             action = (self.sell_side, vol, price)
         elif action_id == 10:
