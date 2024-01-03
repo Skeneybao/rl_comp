@@ -17,8 +17,8 @@ def get_new_game():
 
 
 if __name__ == '__main__':
-    TRAINING_EPI = 1e6
-    LEARNING_FREQUENCY = 64
+    TRAINING_EPISODE_NUM = 1e6
+    LEARNING_PERIOD = 16
 
     exp_name = f'{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}-{uuid.uuid4()}'
 
@@ -57,10 +57,10 @@ if __name__ == '__main__':
 
     env = actor.env
 
-    while env.episode_cnt < TRAINING_EPI:
+    while env.episode_cnt < TRAINING_EPISODE_NUM:
         actor.step()
 
-        if env.step_cnt % LEARNING_FREQUENCY == 0:
+        if env.step_cnt % LEARNING_PERIOD == 0:
             loss = learner.step()
             logger.info(f"learner stepping, "
                         f"current step count: {env.step_cnt}, "
