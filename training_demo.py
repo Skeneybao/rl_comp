@@ -1,7 +1,10 @@
+import time
+import uuid
+
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import LearnerConfig, DQNLearner
 from training.DQN.model import Action11OutputWrapper
-from training.env.featureEngine import FeatureEngineDummy
+from training.env.featureEngine import FeatureEngineDummy, FeatureEngineVersion1
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN, DNNModelConfig
 from training.replay.ReplayBuffer import ReplayBuffer
@@ -17,7 +20,9 @@ if __name__ == '__main__':
     TRAINING_EPI = 1000
     LEARNING_FREQUENCY = 64
 
-    feature_engine = FeatureEngineDummy()
+    exp_name = f'{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}-{uuid.uuid4()}'
+
+    feature_engine = FeatureEngineVersion1()
     model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
     model_output_wrapper = Action11OutputWrapper(model)
     replay_buffer = ReplayBuffer(1024)
@@ -27,7 +32,6 @@ if __name__ == '__main__':
         get_new_game,
         feature_engine,
         model_output_wrapper,
-        model,
         replay_buffer,
         actor_config,
     )
@@ -36,7 +40,8 @@ if __name__ == '__main__':
     learner = DQNLearner(
         learner_config,
         model,
-        replay_buffer
+        replay_buffer,
+        exp_name,
     )
 
     env = actor.env
