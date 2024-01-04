@@ -1,5 +1,6 @@
 import time
 import uuid
+import os
 
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import LearnerConfig, DQNLearner
@@ -12,31 +13,32 @@ from training.reward.normalized_net_return import cal_reward
 from training.util.logger import logger
 
 
-def get_new_game():
-    return TrainingStockEnv(mode='ordered', reward_fn=cal_reward)
-
-
 if __name__ == '__main__':
-    TRAINING_EPI = 1000
+    TRAINING_EPI = 1000000
     LEARNING_FREQUENCY = 64
+    SAVING_PATH = '/mnt/data3/rl-data/training_res'
 
-    exp_name = f'{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}-{uuid.uuid4()}'
+    exp_name = f'{time.strftime("%Y%m%d:%H%M%S", time.localtime())}-{str(uuid.uuid4())[:8]}'
+    os.makedirs(os.path.join(SAVING_PATH, exp_name))
 
     feature_engine = FeatureEngineVersion1()
     model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
     model_output_wrapper = Action11OutputWrapper(model)
     replay_buffer = ReplayBuffer(1024)
 
+    env = TrainingStockEnv(mode='ordered', reward_fn=cal_reward,
+                        save_metric_path=os.path.join(SAVING_PATH, exp_name),
+                        save_code_metric=True)
     actor_config = ActorConfig(0.9, 0.05, 10000)
     actor = Actor(
-        get_new_game,
+        env,
         feature_engine,
         model_output_wrapper,
         replay_buffer,
         actor_config,
     )
 
-    learner_config = LearnerConfig()
+    learner_config = LearnerConfig(model_save_prefix=SAVING_PATH, model_save_step=20000)
     learner = DQNLearner(
         learner_config,
         model,
@@ -44,14 +46,13 @@ if __name__ == '__main__':
         exp_name,
     )
 
-    env = actor.env
-
     while env.episode_cnt < TRAINING_EPI:
         actor.step()
 
         if env.step_cnt % LEARNING_FREQUENCY == 0:
             loss = learner.step()
-            logger.info(f"learner stepping, "
-                        f"current step count: {env.step_cnt}, "
-                        f"current episode count: {env.episode_cnt}, "
-                        f"learning loss: {loss}")
+            if env.step_cnt % (1000*LEARNING_FREQUENCY) == 0:
+                logger.info(f"learner stepping, "
+                            f"current step count: {env.step_cnt}, "
+                            f"current episode count: {env.episode_cnt}, "
+                            f"learning loss: {loss}")

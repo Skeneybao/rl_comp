@@ -23,7 +23,7 @@ class LearnerConfig:
     lr: float = 1e-4
     optimizer_type = 'SGD'
     device: torch.device = auto_get_device()
-    model_save_prefix: str = '/mnt/data3/rl-data/model'
+    model_save_prefix: str = '/mnt/data3/rl-data/training_res'
     model_save_step: int = 1000
 
 
@@ -50,6 +50,8 @@ class DQNLearner(Learner):
             # generate name from current time and uuid
             exp_name = f'{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}-{uuid.uuid4()}'
         self.exp_name = exp_name
+        if not os.path.exists(os.path.join(self.config.model_save_prefix, self.exp_name, 'models')):
+            os.makedirs(os.path.join(self.config.model_save_prefix, self.exp_name, 'models'))
         self.step_cnt = 0
 
     def save_model(self, path, model, optimizer=None):
@@ -122,7 +124,7 @@ class DQNLearner(Learner):
         self.step_cnt += 1
 
         if self.step_cnt % self.config.model_save_step == 0:
-            path = f'{self.config.model_save_prefix}/{self.exp_name}/{self.step_cnt}.pt'
+            path = os.path.join(self.config.model_save_prefix, self.exp_name, 'models', f'{self.step_cnt}.pt')
             logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
             self.save_model(path, self.model, self.optimizer)
 

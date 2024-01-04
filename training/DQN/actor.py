@@ -38,13 +38,13 @@ def if_epsilon_greedy(
 class Actor:
     def __init__(
             self,
-            new_env_fn: Callable[[], TrainingStockEnv],
+            env: TrainingStockEnv,
             feature_engine: FeatureEngine,
             output_wrapper: ModelOutputWrapper,
             replay_buffer: ReplayBuffer,
             config: ActorConfig,
     ):
-        self.env = new_env_fn()
+        self.env = env
         self.this_obs, _, _ = self.env.reset()
         self.feature_engine = feature_engine
         self.output_wrapper = output_wrapper
@@ -62,5 +62,6 @@ class Actor:
         valid_action, is_invalid = validate_action(obs, action)
         next_obs, reward, done = self.env.step(valid_action)
         next_state = self.feature_engine.get_feature(next_obs)
-        self.replay_buffer.push([state, model_output, reward, next_state, done])
+        if not obs['eventTime'] > 145500000:
+            self.replay_buffer.push([state, model_output, reward, next_state, done])
         self.this_obs = next_obs
