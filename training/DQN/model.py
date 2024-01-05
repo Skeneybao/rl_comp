@@ -64,6 +64,10 @@ class Action11OutputWrapper(ModelOutputWrapper):
         return action
 
     def select_action(self, observation, model_input: torch.Tensor) -> Tuple[ActionType, torch.tensor, torch.tensor]:
+
+        if observation['eventTime'] > 145500000:
+            return (self.noop_side, 0., 0.), None, None
+        
         # 0. inference
         with torch.no_grad():
             model_output = self.model(model_input)
@@ -77,6 +81,9 @@ class Action11OutputWrapper(ModelOutputWrapper):
         return action, model_input, model_output
 
     def random_action(self, observation, model_input) -> Tuple[ActionType, torch.tensor, torch.tensor]:
+        
+        if observation['eventTime'] > 145500000:
+            return (self.noop_side, 0., 0.), None, None
         action_id = random.randrange(0, 11)
         action = self.action_id_to_action(action_id, observation)
         model_output = torch.zeros(11, dtype=torch.float)
