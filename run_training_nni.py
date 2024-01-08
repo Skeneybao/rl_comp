@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+from collections import deque
 
 import nni
 
@@ -13,23 +14,23 @@ from training.util.logger import logger
 
 multiprocessing.set_start_method('spawn', force=True)
 
+DEFAULT_METRIC_KEY = 'daily_return_mean_sharped'
 
-def evaluate_model_process(eval_config: EvaluatorConfig, avg_loss: float):
-    import nni
-    from evaluator import evaluate_model
 
+def evaluate_model_process(eval_config: EvaluatorConfig, avg_loss: float, result_queue: multiprocessing.Queue):
     metrics = evaluate_model(eval_config)
-    metrics['default'] = metrics['daily_pnl_mean_sharped']
-    nni.report_intermediate_result({**metrics, 'avg_loss': avg_loss})
+    metrics['default'] = metrics[DEFAULT_METRIC_KEY]
+    result_queue.put({**metrics, 'avg_loss': avg_loss})
 
 
 if __name__ == '__main__':
-    TRAINING_EPISODE_NUM = 1e6
-    LEARNING_PERIOD = 16
     SAVING_PREFIX = '/mnt/data3/rl-data/training_res'
 
     # Gen exp info & metadata
 
+    #################################
+    # init exp
+    #################################
     exp_info = get_exp_info()
     exp_name = f'{exp_info.nni_exp_id}/{exp_info.nni_trial_id}'
 
@@ -41,6 +42,10 @@ if __name__ == '__main__':
         f.write(f'git_branch: {exp_info.git_branch}\n')
         f.write(f'git_commit: {exp_info.git_commit}\n')
         f.write(f'git_clean: {exp_info.git_clean}\n')
+
+    #################################
+    # set object's param on nni's next parameters
+    #################################
 
     # get params
     (control_param,
@@ -101,24 +106,32 @@ if __name__ == '__main__':
     logger.warning(f"actor_config: {actor_config}")
     logger.warning(f"learner_config: {learner_config}")
 
+    #################################
+    # launch exp
+    #################################
+
     loss_acc = []
     latest_model_num = None
 
-    eval_processes = []
+    eval_processes = deque()
+    result_queue = multiprocessing.Queue()
 
-    while env.episode_cnt < TRAINING_EPISODE_NUM:
+    while env.episode_cnt < control_param.training_episode_num:
         actor.step()
 
-        if env.step_cnt % LEARNING_PERIOD == 0:
+        if env.step_cnt % control_param.learning_period == 0:
             loss = learner.step()
             loss_acc.append(loss)
-            if env.step_cnt % (1000 * LEARNING_PERIOD) == 0:
+            if env.step_cnt % (1000 * control_param.learning_period) == 0:
                 loss_acc = [loss for loss in loss_acc if loss is not None]
                 avg_loss = sum(loss_acc) / len(loss_acc)
                 loss_acc = []
 
                 should_eval = learner.latest_model_num is not None and latest_model_num != learner.latest_model_num
                 if should_eval:
+                    #################################
+                    # eval in another process
+                    #################################
                     latest_model_num = learner.latest_model_num
 
                     eval_config = EvaluatorConfig(
@@ -129,11 +142,20 @@ if __name__ == '__main__':
                     )
                     eval_process = multiprocessing.Process(
                         target=evaluate_model_process,
-                        args=(eval_config, avg_loss),
+                        args=(eval_config, avg_loss, result_queue),
                         name=f'eval_{latest_model_num}_process',
                     )
                     eval_process.start()
                     eval_processes.append(eval_process)
+                #################################
+                # try to report available result
+                #################################
+                if len(eval_processes) > 0:
+                    head_process: multiprocessing.Process = eval_processes[0]
+                    if not head_process.is_alive():
+                        result = result_queue.get()
+                        nni.report_intermediate_result(result)
+                        eval_processes.popleft()
 
                 epsilon = cal_epsilon(actor_config, env.step_cnt)
                 logger.info(f"learner stepping, "
@@ -142,6 +164,9 @@ if __name__ == '__main__':
                             f"current episode count: {env.episode_cnt}, "
                             f"current epsilon: {epsilon}, "
                             f"avg_loss: {avg_loss}")
+    #################################
+    # report final result
+    #################################
 
     eval_config = EvaluatorConfig(
         data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
@@ -151,9 +176,13 @@ if __name__ == '__main__':
     )
 
     metrics = evaluate_model(eval_config)
-    metrics['default'] = metrics['daily_pnl_mean_sharped']
+    metrics['default'] = metrics[DEFAULT_METRIC_KEY]
     metrics = {**metrics, 'avg_loss': sum(loss_acc) / len(loss_acc)}
 
-    [process.join() for process in eval_processes]
+    # clear unfinished eval process
+    for process in eval_processes:
+        process.join()
+        result = result_queue.get()
+        nni.report_intermediate_result(result)
 
     nni.report_final_result(metrics)
