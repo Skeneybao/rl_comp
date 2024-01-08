@@ -87,18 +87,18 @@ if __name__ == '__main__':
 
     # debug
 
-    print("exp_info: ", exp_info)
-    print("control_param: ", control_param)
-    print("env_param: ", env_param)
-    print("feature_engine_type: ", feature_engine_type)
-    print("feature_engine_param: ", feature_engine_param)
-    print("model_type: ", model_type)
-    print("model_param: ", model_param)
-    print("output_wrapper_type: ", output_wrapper_type)
-    print("output_wrapper_param: ", output_wrapper_param)
-    print("replay_buffer_param: ", replay_buffer_param)
-    print("actor_config: ", actor_config)
-    print("learner_config: ", learner_config)
+    logger.warning(f"exp_info: {exp_info}")
+    logger.warning(f"control_param: {control_param}")
+    logger.warning(f"env_param: {env_param}")
+    logger.warning(f"feature_engine_type: {feature_engine_type}")
+    logger.warning(f"feature_engine_param: {feature_engine_param}")
+    logger.warning(f"model_type: {model_type}")
+    logger.warning(f"model_param: {model_param}")
+    logger.warning(f"output_wrapper_type: {output_wrapper_type}")
+    logger.warning(f"output_wrapper_param: {output_wrapper_param}")
+    logger.warning(f"replay_buffer_param: {replay_buffer_param}")
+    logger.warning(f"actor_config: {actor_config}")
+    logger.warning(f"learner_config: {learner_config}")
 
     loss_acc = []
     latest_model_num = None
@@ -126,7 +126,11 @@ if __name__ == '__main__':
                         training_res_path=saving_path,
                         model_name=f'{latest_model_num}.pt',
                     )
-                    eval_process = multiprocessing.Process(target=evaluate_model_process, args=(eval_config, avg_loss))
+                    eval_process = multiprocessing.Process(
+                        target=evaluate_model_process,
+                        args=(eval_config, avg_loss),
+                        name=f'eval_{latest_model_num}',
+                    )
                     eval_process.start()
                     eval_processes.append(eval_process)
 
