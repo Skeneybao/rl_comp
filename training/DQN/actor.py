@@ -6,8 +6,8 @@ import math
 import torch
 from torch import nn
 
-from training.DQN.model import ModelOutputWrapper
-from training.env.featureEngine import FeatureEngine
+from training.model_io.output_wrapper import ModelOutputWrapper
+from training.model_io.featureEngine import FeatureEngine
 from training.env.trainingEnv import TrainingStockEnv
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.validate_action import validate_action

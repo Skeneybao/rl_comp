@@ -1,11 +1,12 @@
 import unittest
 
+import training.DQN.learner
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import DQNLearner, LearnerConfig
-from training.DQN.model import Action11OutputWrapper
-from training.env.featureEngine import FeatureEngineDummy
 from training.env.trainingEnv import TrainingStockEnv
-from training.model.DNN import DNNModelConfig, DNN
+from training.model.DNN import DNN
+from training.model_io.featureEngine import FeatureEngineDummy
+from training.model_io.output_wrapper import Action11OutputWrapper
 from training.replay.ReplayBuffer import ReplayBuffer
 
 
@@ -16,13 +17,13 @@ class LearnerTestCase(unittest.TestCase):
 
     def test_optimize(self):
         feature_engine = FeatureEngineDummy()
-        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
         model_output_wrapper = Action11OutputWrapper(model)
         replay_buffer = ReplayBuffer(1024)
 
         actor_config = ActorConfig(0.9, 0.05, 1000)
         actor = Actor(
-            self.new_game,
+            self.new_game(),
             feature_engine,
             model_output_wrapper,
             replay_buffer,
@@ -36,7 +37,8 @@ class LearnerTestCase(unittest.TestCase):
         learner = DQNLearner(
             learner_config,
             model,
-            replay_buffer
+            replay_buffer,
+            training.DQN.learner.NOT_SAVING
         )
 
         losses = [learner.step() for _ in range(100)]
@@ -45,13 +47,14 @@ class LearnerTestCase(unittest.TestCase):
 
     def test_update_target_model(self):
         feature_engine = FeatureEngineDummy()
-        model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
         replay_buffer = ReplayBuffer(1024)
         learner_config = LearnerConfig()
         learner = DQNLearner(
             learner_config,
             model,
-            replay_buffer
+            replay_buffer,
+            training.DQN.learner.NOT_SAVING
         )
 
         fake_target_dict = learner.model.state_dict()

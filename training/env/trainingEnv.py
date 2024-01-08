@@ -7,7 +7,7 @@ from typing import Callable, Dict
 
 import numpy as np
 
-from training.DQN.model import ActionType
+from training.model_io.output_wrapper import ActionType
 from training.util.logger import logger
 
 CURRENT_PATH = str(Path(__file__).resolve().parent.parent)

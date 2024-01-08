@@ -1,8 +1,8 @@
 import unittest
 
-from training.DQN.model import Action11OutputWrapper
-from training.env.featureEngine import FeatureEngineDummy
-from training.model.DNN import DNNModelConfig, DNN
+from training.model_io.output_wrapper import Action11OutputWrapper
+from training.model_io.featureEngine import FeatureEngineDummy
+from training.model.DNN import DNN
 
 
 class ModelOutputWrapperTest(unittest.TestCase):
@@ -43,8 +43,7 @@ class ModelOutputWrapperTest(unittest.TestCase):
 
     def test_inference(self):
         feature_engine = FeatureEngineDummy()
-        model = DNN(
-            DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
         model_output_wrapper = Action11OutputWrapper(model)
         for i in range(100):
             action, model_input, model_output = model_output_wrapper.select_action(
@@ -65,8 +64,7 @@ class ModelOutputWrapperTest(unittest.TestCase):
 
     def test_random_action(self):
         feature_engine = FeatureEngineDummy()
-        model = DNN(
-            DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
         model_output_wrapper = Action11OutputWrapper(model)
         actions = []
         iters = 10000
@@ -84,8 +82,7 @@ class ModelOutputWrapperTest(unittest.TestCase):
 
     def test_action_id_to_action(self):
         feature_engine = FeatureEngineDummy()
-        model = DNN(
-            DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+        model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
         model_output_wrapper = Action11OutputWrapper(model)
 
         action_ids = list(range(11))

@@ -2,12 +2,12 @@ import torch
 import os
 from typing import Callable, Dict
 
-from training.DQN.model import ActionType
+from training.model_io.output_wrapper import ActionType
 from dataclasses import dataclass
 from training.env.trainingEnv import TrainingStockEnv
-from training.env.featureEngine import FeatureEngineVersion1
-from training.model.DNN import DNN, DNNModelConfig
-from training.DQN.model import Action11OutputWrapper
+from training.model_io.featureEngine import FeatureEngineVersion1
+from training.model.DNN import DNN
+from training.model_io.output_wrapper import Action11OutputWrapper
 from training.util.validate_action import validate_action
 from training.reward.normalized_net_return import cal_reward
 
@@ -38,7 +38,7 @@ def evaluate_model(config: EvaluatorConfig):
     )
 
     feature_engine = FeatureEngineVersion1()
-    model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+    model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
     checkpoint = torch.load(os.path.join(config.training_res_path, 'models', config.model_name))
     model.load_state_dict(checkpoint['model_state_dict'])
     model_output_wrapper = Action11OutputWrapper(model)

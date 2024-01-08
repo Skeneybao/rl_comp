@@ -1,6 +1,6 @@
 from typing import Dict
 
-from training.DQN.model import ActionType
+from training.model_io.output_wrapper import ActionType
 
 
 def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
