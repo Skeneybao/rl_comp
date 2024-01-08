@@ -4,7 +4,7 @@ import sys
 
 def get_logger():
     logger = logging.getLogger('rl-comp')
-    logger.setLevel(logging.DEBUG)  # Capture all levels of log
+    logger.setLevel(logging.INFO)
 
     # Create two handlers: one for stdout and one for stderr
     stdout_handler = logging.StreamHandler(sys.stdout)
