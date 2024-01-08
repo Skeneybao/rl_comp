@@ -138,7 +138,7 @@ if __name__ == '__main__':
                 epsilon = cal_epsilon(actor_config, env.step_cnt)
                 logger.info(f"learner stepping, "
                             f"current actor step count: {env.step_cnt}, "
-                            f"current learner step count: {learner.step_cnt},"
+                            f"current learner step count: {learner.step_cnt}, "
                             f"current episode count: {env.episode_cnt}, "
                             f"current epsilon: {epsilon}, "
                             f"avg_loss: {avg_loss}")
