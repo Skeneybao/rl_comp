@@ -1,5 +1,7 @@
 import os
 
+import nni
+
 from training.DQN.actor import Actor
 from training.DQN.learner import DQNLearner
 from training.env.trainingEnv import TrainingStockEnv
@@ -85,13 +87,22 @@ if __name__ == '__main__':
     print("actor_config: ", actor_config)
     print("learner_config: ", learner_config)
 
+    loss_acc = []
+
     while env.episode_cnt < TRAINING_EPISODE_NUM:
         actor.step()
 
         if env.step_cnt % LEARNING_PERIOD == 0:
             loss = learner.step()
+            loss_acc.append(loss)
             if env.step_cnt % (1000 * LEARNING_PERIOD) == 0:
+                avg_loss = sum(loss_acc) / len(loss_acc)
+                loss_acc = []
+
+                metrics = {'avg_loss': avg_loss}
+
+                nni.report_intermediate_result(metrics)
                 logger.info(f"learner stepping, "
                             f"current step count: {env.step_cnt}, "
                             f"current episode count: {env.episode_cnt}, "
-                            f"learning loss: {loss}")
+                            f"metrics: {metrics}")
