@@ -19,6 +19,7 @@ def evaluate_model_process(eval_config: EvaluatorConfig, avg_loss: float):
     from evaluator import evaluate_model
 
     metrics = evaluate_model(eval_config)
+    metrics['default'] = metrics['daily_pnl_mean_sharped']
     nni.report_intermediate_result({**metrics, 'avg_loss': avg_loss})
 
 
@@ -129,7 +130,7 @@ if __name__ == '__main__':
                     eval_process = multiprocessing.Process(
                         target=evaluate_model_process,
                         args=(eval_config, avg_loss),
-                        name=f'eval_{latest_model_num}',
+                        name=f'eval_{latest_model_num}_process',
                     )
                     eval_process.start()
                     eval_processes.append(eval_process)
@@ -150,6 +151,7 @@ if __name__ == '__main__':
     )
 
     metrics = evaluate_model(eval_config)
+    metrics['default'] = metrics['daily_pnl_mean_sharped']
     metrics = {**metrics, 'avg_loss': sum(loss_acc) / len(loss_acc)}
 
     [process.join() for process in eval_processes]
