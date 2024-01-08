@@ -20,6 +20,14 @@ class ActorConfig:
     eps_decay: float = 1000
 
 
+def cal_epsilon(
+        config: ActorConfig,
+        steps_done: int,
+):
+    eps_threshold = config.eps_end + (config.eps_start - config.eps_end) * math.exp(-1. * steps_done / config.eps_decay)
+    return eps_threshold
+
+
 def if_epsilon_greedy(
         config: ActorConfig,
         steps_done: int,
@@ -28,7 +36,7 @@ def if_epsilon_greedy(
     Decide whether to use epsilon greedy strategy. If return True, use epsilon greedy strategy.
     """
     sample = random.random()
-    eps_threshold = config.eps_end + (config.eps_start - config.eps_end) * math.exp(-1. * steps_done / config.eps_decay)
+    eps_threshold = cal_epsilon(config, steps_done)
     if sample < eps_threshold:
         return True
     else:

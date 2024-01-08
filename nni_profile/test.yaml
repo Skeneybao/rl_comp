@@ -3,7 +3,7 @@ search_space:
     _type: choice
     _value: [ 128, 256, 512 ]
 
-trial_command: python run_training.py
+trial_command: python run_training_nni.py
 trial_code_directory: ../
 
 trial_concurrency: 2

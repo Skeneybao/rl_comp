@@ -11,9 +11,10 @@ from training.model_io.output_wrapper import Action11OutputWrapper
 from training.model_io.output_wrapper import ActionType
 from training.reward.normalized_net_return import cal_reward
 from training.util.validate_action import validate_action
+from training.util.logger import logger
 
 
-@dataclass
+@dataclass(frozen=True)
 class EvaluatorConfig:
     training_res_path: str
     model_name: str
@@ -23,6 +24,7 @@ class EvaluatorConfig:
 
 
 def evaluate_model(config: EvaluatorConfig):
+    # TODO: make feature_engine_type, model_type, output_wrapper_type configurable
     eval_res_path = os.path.join(config.training_res_path, f"eval_result_{config.model_name}")
     if not os.path.exists(eval_res_path):
         os.makedirs(eval_res_path)
@@ -37,6 +39,8 @@ def evaluate_model(config: EvaluatorConfig):
 
     )
 
+    logger.info(f'evaluating model {config.model_name} on {config.date}')
+
     feature_engine = FeatureEngineVersion1()
     model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
     checkpoint = torch.load(os.path.join(config.training_res_path, 'models', config.model_name))
@@ -50,6 +54,11 @@ def evaluate_model(config: EvaluatorConfig):
         action, _, _ = model_output_wrapper.select_action(obs, state)
         valid_action, is_invalid = validate_action(obs, action)
         obs, _, _ = env.step(valid_action)
+
+
+    logger.info(f'evaluating model {config.model_name} on {config.date} done.')
+
+    return env.compute_final_stats()
 
 
 if __name__ == '__main__':

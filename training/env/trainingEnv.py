@@ -5,7 +5,9 @@ import csv
 from pathlib import Path
 from typing import Callable, Dict
 
+import math
 import numpy as np
+import pandas as pd
 
 from training.model_io.output_wrapper import ActionType
 from training.util.logger import logger
@@ -210,16 +212,46 @@ class TrainingStockEnv(Game):
 
     def __len__(self):
         return len(self._dateIter)
-    
-    def __del__(self):
-        try:
-            self._code_output_file.close()
-        except:
-            pass
-        try:
-            self._daily_output_file.close()
-        except:
-            pass
+
+    def compute_final_stats(self):
+        df = pd.read_csv(os.path.join(self._save_metric_path, "daily_metric.csv"))
+        stats = {}
+        is_traded_day = df['day_total_orders_volume'] != 0
+        days_traded = df.loc[is_traded_day, 'day_pnl'].count()
+        days_win = sum(df.loc[:, 'day_pnl'] > 0)
+
+        stats['day_pnl_mean'] = df.loc[:, 'day_pnl'].mean()
+        stats['daily_return_mean'] = df.loc[:, 'daily_return'].mean()
+        stats['code_nums_mean'] = df.loc[:, 'code_nums'].mean()
+        stats['day_total_orders_volume_mean'] = df.loc[:,
+                                                'day_total_orders_volume'].mean()
+
+        has_traded = days_traded != 0
+        stats['win_rate'] = days_win / float(days_traded) if has_traded else 0
+        pnl_total_sum = df.loc[:, 'day_pnl'].sum()
+        stats['day_traded_pnl_mean'] = pnl_total_sum / \
+                                       days_traded if has_traded else 0
+        pnl_std = df.loc[:, 'day_pnl'].std(ddof=0)
+
+        std_net_pnl = df.loc[:, 'day_pnl'].std(ddof=0)
+        std_net_pnl_notnan = not math.isnan(std_net_pnl)
+        std_net_pnl_is_valid = std_net_pnl_notnan and has_traded and std_net_pnl != 0
+        stats['sharpe'] = math.sqrt(
+            250) * stats['day_pnl_mean'] / pnl_std if std_net_pnl_is_valid else 1
+
+        fee_sum = df.loc[:, 'day_handling_fee'].sum()
+        stats['day_handling_fee_mean'] = fee_sum / \
+                                         days_traded if has_traded else 0
+        if stats['day_pnl_mean'] >= 0:
+            stats['daily_return_mean_sharped'] = stats['daily_return_mean'] * \
+                                                 min(10, stats['sharpe']) / 10
+            stats['daily_pnl_mean_sharped'] = stats['day_pnl_mean'] * \
+                                              min(10, stats['sharpe']) / 10
+        else:
+            stats['daily_return_mean_sharped'] = stats['daily_return_mean']
+            stats['daily_pnl_mean_sharped'] = stats['day_pnl_mean']
+
+        return stats
 
     @property
     def episode_cnt(self):

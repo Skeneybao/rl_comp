@@ -1,13 +1,26 @@
+import multiprocessing
 import os
 
 import nni
 
-from training.DQN.actor import Actor
+from evaluator import EvaluatorConfig, evaluate_model
+from training.DQN.actor import Actor, cal_epsilon
 from training.DQN.learner import DQNLearner
 from training.env.trainingEnv import TrainingStockEnv
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.exp_management import get_exp_info, get_param_from_nni
 from training.util.logger import logger
+
+multiprocessing.set_start_method('spawn', force=True)
+
+
+def evaluate_model_process(eval_config: EvaluatorConfig, avg_loss: float):
+    import nni
+    from evaluator import evaluate_model
+
+    metrics = evaluate_model(eval_config)
+    nni.report_intermediate_result({**metrics, 'avg_loss': avg_loss})
+
 
 if __name__ == '__main__':
     TRAINING_EPISODE_NUM = 1e6
@@ -88,6 +101,9 @@ if __name__ == '__main__':
     print("learner_config: ", learner_config)
 
     loss_acc = []
+    latest_model_num = None
+
+    eval_processes = []
 
     while env.episode_cnt < TRAINING_EPISODE_NUM:
         actor.step()
@@ -96,13 +112,42 @@ if __name__ == '__main__':
             loss = learner.step()
             loss_acc.append(loss)
             if env.step_cnt % (1000 * LEARNING_PERIOD) == 0:
+                loss_acc = [loss for loss in loss_acc if loss is not None]
                 avg_loss = sum(loss_acc) / len(loss_acc)
                 loss_acc = []
 
-                metrics = {'avg_loss': avg_loss}
+                should_eval = learner.latest_model_num is not None and latest_model_num != learner.latest_model_num
+                if should_eval:
+                    latest_model_num = learner.latest_model_num
 
-                nni.report_intermediate_result(metrics)
+                    eval_config = EvaluatorConfig(
+                        data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
+                        date='ALL',
+                        training_res_path=saving_path,
+                        model_name=f'{latest_model_num}.pt',
+                    )
+                    eval_process = multiprocessing.Process(target=evaluate_model_process, args=(eval_config, avg_loss))
+                    eval_process.start()
+                    eval_processes.append(eval_process)
+
+                epsilon = cal_epsilon(actor_config, env.step_cnt)
                 logger.info(f"learner stepping, "
-                            f"current step count: {env.step_cnt}, "
+                            f"current actor step count: {env.step_cnt}, "
+                            f"current learner step count: {learner.step_cnt},"
                             f"current episode count: {env.episode_cnt}, "
-                            f"metrics: {metrics}")
+                            f"current epsilon: {epsilon}, "
+                            f"avg_loss: {avg_loss}")
+
+    eval_config = EvaluatorConfig(
+        data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
+        date='ALL',
+        training_res_path=saving_path,
+        model_name=f'{learner.latest_model_num}.pt',
+    )
+
+    metrics = evaluate_model(eval_config)
+    metrics = {**metrics, 'avg_loss': sum(loss_acc) / len(loss_acc)}
+
+    [process.join() for process in eval_processes]
+
+    nni.report_final_result(metrics)

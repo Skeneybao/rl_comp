@@ -13,7 +13,7 @@ def get_logger():
     stderr_handler.setLevel(logging.WARNING)  # Log WARNING, ERROR, and CRITICAL to stderr
 
     # Formatter for handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - pid %(process)d - %(module)s - %(levelname)s - %(message)s')
     stdout_handler.setFormatter(formatter)
     stderr_handler.setFormatter(formatter)
 

@@ -56,6 +56,7 @@ class DQNLearner(Learner):
         else:
             self.saving = False
         self.step_cnt = 0
+        self.latest_model_num = None
 
     def save_model(self, path, model, optimizer=None):
         if not os.path.exists(os.path.dirname(path)):
@@ -127,9 +128,10 @@ class DQNLearner(Learner):
         self.step_cnt += 1
 
         if self.saving and self.step_cnt % self.config.model_save_step == 0:
-            path = os.path.join(self.model_saving_path, 'models', f'{self.step_cnt}.pt')
+            path = os.path.join(self.model_saving_path, f'{self.step_cnt}.pt')
             logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
             self.save_model(path, self.model, self.optimizer)
+            self.latest_model_num = self.step_cnt
 
         return loss.item()
 
