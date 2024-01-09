@@ -1,0 +1,18 @@
+search_space:
+  learner_config$batch_size:
+    _type: choice
+    _value: [ 128, 256, 512 ]
+
+trial_command: python run_training_nni.py
+trial_code_directory: ../
+
+trial_concurrency: 2
+max_trial_number: 10
+
+tuner:
+  name: TPE
+  class_args:
+    optimize_mode: maximize
+
+training_service:
+  platform: local

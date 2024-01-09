@@ -1,7 +1,7 @@
 import abc
 import random
 from copy import deepcopy
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Type
 
 import torch
 import torch.nn as nn
@@ -89,3 +89,10 @@ class Action11OutputWrapper(ModelOutputWrapper):
         model_output = torch.zeros(11, dtype=torch.float)
         model_output[action_id] = 1
         return action, model_input, model_output
+
+
+def get_output_wrapper(name: str) -> Type[ModelOutputWrapper]:
+    if name == 'action11':
+        return Action11OutputWrapper
+    else:
+        raise ValueError(f'unknown output wrapper {name}')

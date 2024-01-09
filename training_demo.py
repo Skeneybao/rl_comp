@@ -4,10 +4,10 @@ import os
 
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import LearnerConfig, DQNLearner
-from training.DQN.model import Action11OutputWrapper
-from training.env.featureEngine import FeatureEngineVersion1
+from training.model_io.output_wrapper import Action11OutputWrapper
+from training.model_io.featureEngine import FeatureEngineVersion1
 from training.env.trainingEnv import TrainingStockEnv
-from training.model.DNN import DNN, DNNModelConfig
+from training.model.DNN import DNN
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.reward.normalized_net_return import cal_reward
 from training.util.logger import logger
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(SAVING_PATH, exp_name))
 
     feature_engine = FeatureEngineVersion1()
-    model = DNN(DNNModelConfig(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape()))
+    model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
     model_output_wrapper = Action11OutputWrapper(model)
     replay_buffer = ReplayBuffer(10000)
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
         learner_config,
         model,
         replay_buffer,
-        exp_name,
+        os.path.join(SAVING_PATH, exp_name),
     )
 
     while env.episode_cnt < TRAINING_EPISODE_NUM:
