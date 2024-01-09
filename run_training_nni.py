@@ -14,6 +14,7 @@ from training.util.logger import logger
 
 multiprocessing.set_start_method('spawn', force=True)
 
+# metric used to evaluate model
 DEFAULT_METRIC_KEY = 'daily_return_mean_sharped'
 
 
