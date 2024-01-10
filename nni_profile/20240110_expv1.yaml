@@ -18,8 +18,8 @@ search_space:
 trial_command: python run_training_nni.py
 trial_code_directory: ../
 
-trial_concurrency: 2
-max_trial_number: 10
+trial_concurrency: 4
+max_trial_number: 100
 
 tuner:
   name: TPE
