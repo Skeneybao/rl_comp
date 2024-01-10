@@ -82,6 +82,8 @@ class DQNLearner(Learner):
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.lr)
         elif self.config.optimizer_type == 'SGD':
             optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config.lr)
+        elif self.config.optimizer_type == 'RMSprop':
+            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.config.lr)
         else:
             raise ValueError(f'Unknown optimizer type: {self.config.optimizer_type}')
         return optimizer
