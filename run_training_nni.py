@@ -169,16 +169,18 @@ if __name__ == '__main__':
     # report final result
     #################################
 
-    eval_config = EvaluatorConfig(
-        data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
-        date='ALL',
-        training_res_path=saving_path,
-        model_name=f'{learner.latest_model_num}.pt',
-    )
+    if latest_model_num != learner.latest_model_num:
+        # need to evaluate last model
+        eval_config = EvaluatorConfig(
+            data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
+            date='ALL',
+            training_res_path=saving_path,
+            model_name=f'{learner.latest_model_num}.pt',
+        )
 
-    metrics = evaluate_model(eval_config)
-    metrics['default'] = metrics[DEFAULT_METRIC_KEY]
-    metrics = {**metrics, 'avg_loss': sum(loss_acc) / len(loss_acc)}
+        metrics = evaluate_model(eval_config)
+        metrics['default'] = metrics[DEFAULT_METRIC_KEY]
+        metrics = {**metrics, 'avg_loss': sum(loss_acc) / len(loss_acc)}
 
     # clear unfinished eval process
     for process in eval_processes:
@@ -186,4 +188,7 @@ if __name__ == '__main__':
         result = result_queue.get()
         nni.report_intermediate_result(result)
 
-    nni.report_final_result(metrics)
+    if latest_model_num != learner.latest_model_num:
+        nni.report_final_result(metrics)
+    else:
+        nni.report_final_result(result)
