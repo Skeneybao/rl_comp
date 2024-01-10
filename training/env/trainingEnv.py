@@ -8,6 +8,7 @@ from typing import Callable, Dict
 import math
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from training.model_io.output_wrapper import ActionType
 from training.util.logger import logger
@@ -18,8 +19,8 @@ sys.path.append(stock_path)
 
 TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
 TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
-
 TRAIN_DATA_PATH = TRAINING_DATA_5SEC
+CODE_TO_PLOT = [486.0, 218.0, 143.0, 492.0]
 
 from env.utils.box import Box
 from env.utils.discrete import Discrete
@@ -79,6 +80,10 @@ class TrainingStockEnv(Game):
             dateList.sort()
             self._dateIter = OrderedIterator(dateList)
 
+        self._code_to_plot = CODE_TO_PLOT 
+        self._code_pos_path = []
+        self._code_price_path = []
+        self._code_reward_accum_path = []
         self._code_reward_accum = 0
         self._daily_reward_accum = 0
         self._current_env = None
@@ -154,6 +159,10 @@ class TrainingStockEnv(Game):
 
         self._code_reward_accum += reward
         self._daily_reward_accum += reward
+        if obs['code'] in self._code_to_plot:
+            self._code_pos_path.append(obs['code_net_position'])
+            self._code_reward_accum_path.append(self._code_reward_accum)
+            self._code_price_path.append((obs['ap0'] + obs['bp0'])/2/obs['ap0_t0'])
 
         # Handling when done:
         # 0: not done, 1: done in this file, 2: done for this code of stock
@@ -181,27 +190,53 @@ class TrainingStockEnv(Game):
                 with open(os.path.join(self._save_metric_path, 'code_metric',f"{self._current_env.date}.csv"), 'a', newline='') as f:
                     code_metric_writer = csv.DictWriter(f, fieldnames=['code', 'time', 'code_net_position', 'code_pnl', 'code_cash_pnl', 'code_positional_pnl', 'code_handling_fee', 'ap0_t0', 'reward'])
                     code_metric_writer.writerow(metric_to_log)
+
+                self._deal_code_plot(obs['code'])
+
             obs, _, info = self._current_env.reset()
             self._step_cnt_except_this_episode = self._step_cnt
             self._episode_cnt += 1
             self._code_reward_accum = 0
+
+            self._code_pos_path = []
+            self._code_price_path = []
+            self._code_reward_accum_path = []
+        
+        
+        
         elif done == 1:
             # current file is done, reset whole thing
             if self._save_daily_metric:
                 with open(os.path.join(self._save_metric_path, "daily_metric.csv"), 'a', newline='') as f:
                     daily_metric_writer = csv.DictWriter(f, fieldnames=['date', 'code_nums', 'day_pnl', 'daily_return', 'day_handling_fee', 'day_total_orders_num', 'day_total_orders_volume'])
                     daily_metric_writer.writerow(self._current_env.get_backtest_metric())
-
+            self._deal_code_plot(obs['code'])
+            
             obs, _, info = self.reset()
             self._step_cnt_except_this_episode = self._step_cnt
             self._episode_cnt += 1
             self._code_reward_accum = 0
             self._daily_reward_accum = 0
 
+            self._code_pos_path = []
+            self._code_price_path = []
+            self._code_reward_accum_path = []
+
         observation = {**obs, **info}
         self._last_obs = observation
 
         return observation, reward, done
+
+    def _deal_code_plot(self, code):
+        if code in self._code_to_plot:
+            fig, ax = plt.subplots()
+            ax.plot(np.array(self._code_pos_path)/300, label='net_position')
+            ax.plot( (np.array(self._code_price_path) - 1) * 10, label = 'price')
+            ax.set_ylim(-1.0, 1.0)
+            ax2 = ax.twinx()
+            ax2.plot( self._code_reward_accum_path, label='reward_accum', color='plum')
+            fig.legend(loc='upper left')
+            fig.savefig(os.path.join(self._save_metric_path, 'code_metric',f"{self._current_env.date}_{int(code)}.png"))
 
     def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
         assert obs_after['code'] == obs_before['code']
