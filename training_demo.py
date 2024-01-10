@@ -51,7 +51,7 @@ if __name__ == '__main__':
         tau=0.005,
         lr=1e-5,
         optimizer_type='SGD',
-        model_save_prefix=SAVING_PATH,
+        #model_save_prefix=SAVING_PATH,
         model_save_step=20000,
     )
     learner = DQNLearner(
