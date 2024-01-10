@@ -17,11 +17,18 @@ multiprocessing.set_start_method('spawn', force=True)
 # metric used to evaluate model
 DEFAULT_METRIC_KEY = 'daily_return_mean_sharped'
 
+# second_best or best
+FINAL_METRIC_STRATEGY = 'second_best'
 
-def evaluate_model_process(eval_config: EvaluatorConfig, avg_loss: float, result_queue: multiprocessing.Queue):
+
+def evaluate_model_process(
+        eval_config: EvaluatorConfig,
+        avg_loss: float,
+        model_name: int,
+        result_queue: multiprocessing.Queue):
     metrics = evaluate_model(eval_config)
     metrics['default'] = metrics[DEFAULT_METRIC_KEY]
-    result_queue.put({**metrics, 'avg_loss': avg_loss})
+    result_queue.put((model_name, {**metrics, 'avg_loss': avg_loss, 'model_name': f'{model_name}.pt'}))
 
 
 if __name__ == '__main__':
@@ -116,6 +123,7 @@ if __name__ == '__main__':
 
     eval_processes = deque()
     result_queue = multiprocessing.Queue()
+    result_dict = {}
 
     while env.episode_cnt < control_param.training_episode_num:
         actor.step()
@@ -143,7 +151,7 @@ if __name__ == '__main__':
                     )
                     eval_process = multiprocessing.Process(
                         target=evaluate_model_process,
-                        args=(eval_config, avg_loss, result_queue),
+                        args=(eval_config, avg_loss, latest_model_num, result_queue),
                         name=f'eval_{latest_model_num}_process',
                     )
                     eval_process.start()
@@ -154,7 +162,8 @@ if __name__ == '__main__':
                 if len(eval_processes) > 0:
                     head_process: multiprocessing.Process = eval_processes[0]
                     if not head_process.is_alive():
-                        result = result_queue.get()
+                        (key, result) = result_queue.get()
+                        result_dict[key] = result
                         nni.report_intermediate_result(result)
                         eval_processes.popleft()
 
@@ -177,18 +186,26 @@ if __name__ == '__main__':
             training_res_path=saving_path,
             model_name=f'{learner.latest_model_num}.pt',
         )
-
-        metrics = evaluate_model(eval_config)
-        metrics['default'] = metrics[DEFAULT_METRIC_KEY]
-        metrics = {**metrics, 'avg_loss': sum(loss_acc) / len(loss_acc)}
+        eval_process = multiprocessing.Process(
+            target=evaluate_model_process,
+            args=(eval_config, sum(loss_acc) / len(loss_acc), latest_model_num, result_queue),
+            name=f'eval_{latest_model_num}_process',
+        )
+        eval_process.start()
+        eval_processes.append(eval_process)
 
     # clear unfinished eval process
     for process in eval_processes:
         process.join()
-        result = result_queue.get()
+        (key, result) = result_queue.get()
+        result_dict[key] = result
         nni.report_intermediate_result(result)
 
-    if latest_model_num != learner.latest_model_num:
-        nni.report_final_result(metrics)
+    # find the best metric to report
+    if FINAL_METRIC_STRATEGY == 'best':
+        best_metric = max(result_dict.values(), key=lambda x: x['default'])
+    elif FINAL_METRIC_STRATEGY == 'second_best':
+        best_metric = sorted(result_dict.values(), key=lambda x: x['default'])[-2]
     else:
-        nni.report_final_result(result)
+        raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')
+    nni.report_final_result(best_metric)

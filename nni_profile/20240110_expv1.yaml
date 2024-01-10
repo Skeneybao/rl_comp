@@ -1,7 +1,7 @@
 search_space:
   episode_num:
     _type: quniform
-    _value: [ 10000, 100000, 10000 ]
+    _value: [ 10000, 50000, 10000 ]
   learner_config$batch_size:
     _type: choice
     _value: [ 128, 256, 512, 1024 ]
