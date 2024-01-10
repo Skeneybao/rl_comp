@@ -6,7 +6,7 @@ from training.model_io.output_wrapper import ActionType
 def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
     """
     calculate reward by normalized net return
-    reward = ( <code_cash_pnl after step> - <code_cash_pnl before step>) / <ap0_t0>
+    reward = ( <code_pnl>) / <ap0_t0>
 
     SPECIAL NOTE on obs_before and obs_after:
     - obs_before contains the observation before the action is taken, while obs_after contains the observation after the
@@ -39,4 +39,4 @@ def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: Actio
     :param action:
     :return:
     """
-    return (obs_after['code_cash_pnl'] - obs_before['code_cash_pnl']) / obs_after['ap0_t0']
+    return obs_after['code_pnl'] / obs_after['ap0_t0']
