@@ -19,7 +19,7 @@ learner参数`model_save_prefix`确定，默认为`/mnt/data3/rl-data/training_r
     - 其中参数以`<module>$<param name>`的形式给出，如`learner_config$batch_size`，意为`learner_config`模块下的`batch_size`参数。
       对应模块的参数将会代理至类构造函数或config类中。
     （过程参考[该文件中`get_param_from_nni`](training/util/exp_management.py)）
-    - 默认参数在[nni_profile/default.yaml](nni_profile/default.yaml)中给出，缺省将使用这些参数。
+    - 默认参数在[training/default_param.py](training/default_param.py)中给出，缺省将使用这些参数。
 - 可以考虑新建一个.yaml文件
 
 ### 启动实验
