@@ -34,4 +34,5 @@ default_param = {
     'learner_config$lr': 1e-5,
     'learner_config$optimizer_type': 'SGD',
     'learner_config$model_save_step': 20000,
+    'learner_config$minimal_buffer_size': 2000,
 }
