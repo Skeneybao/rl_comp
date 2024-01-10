@@ -1,6 +1,6 @@
 default_param = {
     ## control
-    'episode_num': 100_000,
+    'episode_num': 10_000,
     'learning_period': 16,
 
     ## env param
