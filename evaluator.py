@@ -6,13 +6,12 @@ import torch
 from torch import nn
 
 from training.env.trainingEnv import TrainingStockEnv
-from training.model.DNN import DNN
-from training.model_io.featureEngine import FeatureEngineVersion1, FeatureEngine
+from training.model_io.featureEngine import FeatureEngine
 from training.model_io.output_wrapper import Action11OutputWrapper, ModelOutputWrapper
 from training.model_io.output_wrapper import ActionType
 from training.reward.normalized_net_return import cal_reward
-from training.util.validate_action import validate_action
 from training.util.logger import logger
+from training.util.validate_action import validate_action
 
 
 @dataclass(frozen=True)
