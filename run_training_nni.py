@@ -148,6 +148,11 @@ if __name__ == '__main__':
                         date='ALL',
                         training_res_path=saving_path,
                         model_name=f'{latest_model_num}.pt',
+                        feature_engine_type=feature_engine_type,
+                        feature_engine_param=feature_engine_param,
+                        model_type=model_type,
+                        model_param=model_param,
+                        output_wrapper_type=output_wrapper_type,
                     )
                     eval_process = multiprocessing.Process(
                         target=evaluate_model_process,
@@ -185,6 +190,11 @@ if __name__ == '__main__':
             date='ALL',
             training_res_path=saving_path,
             model_name=f'{learner.latest_model_num}.pt',
+            feature_engine_type=feature_engine_type,
+            feature_engine_param=feature_engine_param,
+            model_type=model_type,
+            model_param=model_param,
+            output_wrapper_type=output_wrapper_type,
         )
         eval_process = multiprocessing.Process(
             target=evaluate_model_process,
