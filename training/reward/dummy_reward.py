@@ -11,7 +11,7 @@ def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: Actio
     - obs_before contains the observation before the action is taken, while obs_after contains the observation after the
       action is taken
     - DIFFERENTLY, obs_after contains the information after the action is taken, and is useful to calculate the reward.
-      However, obs_before contains the information after the last action is taken, and is useless.
+      However, obs_before contains the information after the last action is taken.
 
 
     columns that are in obs include 10 stages of prices and volumes, which are:
