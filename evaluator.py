@@ -26,7 +26,7 @@ class EvaluatorConfig:
     output_wrapper_type: Type[ModelOutputWrapper]
     data_path: str = '/home/rl-comp/Git/rl_comp/env/stock_raw/data'
     date: str = 'ALL'
-    reward_fn: Callable[[int, Dict, Dict, ActionType], float] = cal_reward,
+    reward_fn: Callable[[int, Dict, Dict, ActionType], float] = cal_reward
 
 
 def evaluate_model(config: EvaluatorConfig):
