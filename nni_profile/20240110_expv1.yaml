@@ -1,0 +1,30 @@
+search_space:
+  episode_num:
+    _type: quniform
+    _value: [ 10000, 50000, 10000 ]
+  learner_config$batch_size:
+    _type: choice
+    _value: [ 128, 256, 512, 1024 ]
+  learner_config$lr:
+    _type: loguniform
+    _value: [ 1e-7, 1e-3 ]
+  learner_config$optimizer_type:
+    _type: choice
+    _value: [ 'SGD', 'RMSprop', 'AdamW', 'Adam' ]
+  actor_config$eps_decay:
+    _type: loguniform
+    _value: [ 1e6, 1e9 ]
+
+trial_command: python run_training_nni.py
+trial_code_directory: ../
+
+trial_concurrency: 4
+max_trial_number: 100
+
+tuner:
+  name: TPE
+  class_args:
+    optimize_mode: maximize
+
+training_service:
+  platform: local
