@@ -1,8 +1,6 @@
 import abc
 import copy
 import os
-import time
-import uuid
 from dataclasses import dataclass
 from typing import Optional
 
@@ -21,10 +19,11 @@ class LearnerConfig:
     gamma: float = 0.99
     tau: float = 0.005
     lr: float = 1e-4
-    optimizer_type = 'SGD'
+    optimizer_type: str = 'SGD'
     device: torch.device = auto_get_device()
-    model_save_prefix: str = '/mnt/data3/rl-data/model'
     model_save_step: int = 1000
+    # not start training until replay buffer has at least this number of transitions
+    minimal_buffer_size: int = 1000
 
 
 class Learner(abc.ABC):
@@ -33,24 +32,31 @@ class Learner(abc.ABC):
         pass
 
 
+NOT_SAVING = 'not_saving'
+
+
 class DQNLearner(Learner):
     def __init__(
             self,
             config: LearnerConfig,
             model: nn.Module,
             replay_buffer: ReplayBuffer,
-            exp_name: str = None,
+            model_saving_path: str,
     ):
         self.config = config
         self.replay_buffer = replay_buffer
         self.model = model.to(config.device)
         self.target_model = copy.deepcopy(model).to(config.device)
         self.optimizer = self.__get_optimizer()
-        if exp_name is None:
-            # generate name from current time and uuid
-            exp_name = f'{time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())}-{uuid.uuid4()}'
-        self.exp_name = exp_name
+        if model_saving_path != NOT_SAVING:
+            self.saving = True
+            self.model_saving_path = os.path.join(model_saving_path, 'models')
+            if not os.path.exists(os.path.join(self.model_saving_path, 'models')):
+                os.makedirs(os.path.join(self.model_saving_path, 'models'))
+        else:
+            self.saving = False
         self.step_cnt = 0
+        self.latest_model_num = None
 
     def save_model(self, path, model, optimizer=None):
         if not os.path.exists(os.path.dirname(path)):
@@ -76,6 +82,8 @@ class DQNLearner(Learner):
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.lr)
         elif self.config.optimizer_type == 'SGD':
             optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config.lr)
+        elif self.config.optimizer_type == 'RMSprop':
+            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.config.lr)
         else:
             raise ValueError(f'Unknown optimizer type: {self.config.optimizer_type}')
         return optimizer
@@ -84,7 +92,7 @@ class DQNLearner(Learner):
         """
         Run a single optimization step of a batch.
         """
-        if len(self.replay_buffer.memory) < self.config.batch_size:
+        if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
             return None
 
         transitions = self.replay_buffer.sample(self.config.batch_size)
@@ -121,10 +129,11 @@ class DQNLearner(Learner):
 
         self.step_cnt += 1
 
-        if self.step_cnt % self.config.model_save_step == 0:
-            path = f'{self.config.model_save_prefix}/{self.exp_name}-{self.step_cnt}.pt'
+        if self.saving and self.step_cnt % self.config.model_save_step == 0:
+            path = os.path.join(self.model_saving_path, f'{self.step_cnt}.pt')
             logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
             self.save_model(path, self.model, self.optimizer)
+            self.latest_model_num = self.step_cnt
 
         return loss.item()
 

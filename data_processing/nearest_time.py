@@ -17,11 +17,23 @@ def parse_event_time(event_time):
 
 
 def nearest_5second(time):
-    second = (time.second // 5) * 5
-    return time.replace(minute=time.minute, second=second, microsecond=0)
+    # Add 2 before the division to round to the nearest multiple of 5
+    second = ((time.second + 2) // 5) * 5
+    # Adjust for the case where seconds become 60
+    if second == 60:
+        if time.minute == 59:
+            # If minute is 59 and second rounds to 60, increase the hour
+            return time.replace(hour=(time.hour + 1) % 24, minute=0, second=0, microsecond=0)
+        else:
+            # Else just increase the minute
+            return time.replace(minute=time.minute + 1, second=0, microsecond=0)
+    else:
+        return time.replace(second=second, microsecond=0)
 
 
 def process_data(df):
+    df = df[df['eventTime'] <= 145700000]
+
     df['datetime'] = SeriesParallel(df['eventTime'], n_cores=-1, pbar=False).apply(parse_event_time)
 
     df['nearest_5sec'] = SeriesParallel(df['datetime'], n_cores=-1, pbar=False).apply(nearest_5second)
@@ -44,9 +56,9 @@ if __name__ == '__main__':
         file_relative_path = file.replace(training_set, '')
         output_path = f'{output_path_base}{file_relative_path}'
 
-        if os.path.exists(output_path):
-            print(f'{output_path} already exists, skipping')
-            continue
+        # if os.path.exists(output_path):
+        #     print(f'{output_path} already exists, skipping')
+        #     continue
 
         df = pd.read_parquet(file)
         df_result = process_data(df)

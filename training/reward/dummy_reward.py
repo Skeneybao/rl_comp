@@ -1,6 +1,7 @@
 from typing import Dict
 import math
-from training.DQN.model import ActionType
+
+from training.model_io.output_wrapper import ActionType
 
 
 def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
@@ -11,10 +12,15 @@ def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: Actio
     - obs_before contains the observation before the action is taken, while obs_after contains the observation after the
       action is taken
     - DIFFERENTLY, obs_after contains the information after the action is taken, and is useful to calculate the reward.
-      However, obs_before contains the information after the last action is taken, and is useless.
+      However, obs_before contains the information after the last action is taken.
 
 
-    columns that are in obs include 10 stage of prices and volumes
+    columns that are in obs include 10 stages of prices and volumes, which are:
+    - av0-4: 五档卖量
+    - ap0-4: 五档卖价
+    - bv0-4: 五档买量
+    - bp0-4: 五档买价
+
     columns that are in info include the following, from the doc:
     - code_pnl: 某支股票每个 step 后的收益，初始为 0。
                 'code_pnl' = 'code_cash_pnl' + 'code_positional_pnl' - 'code_handling_fee'

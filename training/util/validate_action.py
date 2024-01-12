@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from training.DQN.model import ActionType
+from training.model_io.output_wrapper import ActionType
 
 
 def validate_action(obs: Dict, action: ActionType) -> (ActionType, bool):

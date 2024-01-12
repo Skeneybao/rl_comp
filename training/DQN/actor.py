@@ -6,8 +6,8 @@ import math
 import torch
 from torch import nn
 
-from training.DQN.model import ModelOutputWrapper
-from training.env.featureEngine import FeatureEngine
+from training.model_io.output_wrapper import ModelOutputWrapper
+from training.model_io.featureEngine import FeatureEngine
 from training.env.trainingEnv import TrainingStockEnv
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.validate_action import validate_action
@@ -20,6 +20,14 @@ class ActorConfig:
     eps_decay: float = 1000
 
 
+def cal_epsilon(
+        config: ActorConfig,
+        steps_done: int,
+):
+    eps_threshold = config.eps_end + (config.eps_start - config.eps_end) * math.exp(-1. * steps_done / config.eps_decay)
+    return eps_threshold
+
+
 def if_epsilon_greedy(
         config: ActorConfig,
         steps_done: int,
@@ -28,7 +36,7 @@ def if_epsilon_greedy(
     Decide whether to use epsilon greedy strategy. If return True, use epsilon greedy strategy.
     """
     sample = random.random()
-    eps_threshold = config.eps_end + (config.eps_start - config.eps_end) * math.exp(-1. * steps_done / config.eps_decay)
+    eps_threshold = cal_epsilon(config, steps_done)
     if sample < eps_threshold:
         return True
     else:
@@ -38,17 +46,15 @@ def if_epsilon_greedy(
 class Actor:
     def __init__(
             self,
-            new_env_fn: Callable[[], TrainingStockEnv],
+            env: TrainingStockEnv,
             feature_engine: FeatureEngine,
             output_wrapper: ModelOutputWrapper,
-            model: nn.Module,
             replay_buffer: ReplayBuffer,
             config: ActorConfig,
     ):
-        self.env = new_env_fn()
+        self.env = env
         self.this_obs, _, _ = self.env.reset()
         self.feature_engine = feature_engine
-        self.model = model
         self.output_wrapper = output_wrapper
         self.replay_buffer = replay_buffer
         self.config = config
@@ -64,5 +70,6 @@ class Actor:
         valid_action, is_invalid = validate_action(obs, action)
         next_obs, reward, done = self.env.step(valid_action)
         next_state = self.feature_engine.get_feature(next_obs)
-        self.replay_buffer.push([state, model_output, reward, next_state, done])
+        if not obs['eventTime'] > 145500000:
+            self.replay_buffer.push([state, model_output, reward, next_state, done])
         self.this_obs = next_obs
