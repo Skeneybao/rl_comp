@@ -1,4 +1,5 @@
 from typing import Dict
+import math
 
 from training.model_io.output_wrapper import ActionType
 
@@ -39,4 +40,51 @@ def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: Actio
     :param action:
     :return:
     """
-    return 0
+    market_volatility = (obs_after['ap0']+obs_after['ap1']+obs_after['ap2']+obs_after['ap3']+obs_after['ap4'] - obs_before['ap0']-obs_before['ap1']-obs_before['ap2']-obs_before['ap3']-obs_before['ap4']) + 
+    (obs_after['bp0']+obs_after['bp1']+obs_after['bp2']+obs_after['bp3']+obs_after['bp4'] - obs_before['bp0']-obs_before['bp1']-obs_before['bp2']-obs_before['bp3']-obs_before['bp4'])
+    valid_action, is_invalid = validate_action(obs_after: Dict, action: ActionType)
+    if is_invalid==True:
+        reward=-1
+    reward=obs_after['code_pnl']/(obs_after['code_positional_pnl']-obs_before['code_positional_pnl']+0.1*market_volatility)
+    return reward
+
+
+def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+    """
+    :param steps_done:
+    :param obs_before:
+    :param obs_after:
+    :param action:
+    :return:
+    """
+    return obs_after['code_pnl']/(obs_after['code_positional_pnl']-obs_before['code_positional_pnl'])
+
+def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+    """
+    :param steps_done:
+    :param obs_before:
+    :param obs_after:
+    :param action:
+    :return:
+    """
+    reward_log = math.log(obs_after['code_pnl'] / (obs_after['code_positional_pnl'] - obs_before['code_positional_pnl']))
+    return reward_log
+
+def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+    """
+    :param steps_done:
+    :param obs_before:
+    :param obs_after:
+    :param action:
+    :return:
+    """
+    valid_action, is_invalid = validate_action(obs_after: Dict, action: ActionType)
+    if is_invalid==True:
+        reward=-1
+    reward_log = math.log(obs_after['code_pnl'] / (obs_after['code_positional_pnl'] - obs_before['code_positional_pnl']))
+    return reward_log
+
+
+
+
+
