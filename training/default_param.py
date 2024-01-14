@@ -1,6 +1,6 @@
 default_param = {
     ## control
-    'episode_num': 10_000,
+    'episode_num': 30_000,
     'learning_period': 16,
 
     ## env param
@@ -32,7 +32,7 @@ default_param = {
     'learner_config$gamma': 0.99,
     'learner_config$tau': 0.005,
     'learner_config$lr': 1e-5,
-    'learner_config$optimizer_type': 'SGD',
+    'learner_config$optimizer_type': 'Adam',
     'learner_config$model_save_step': 20000,
     'learner_config$minimal_buffer_size': 2000,
 }
