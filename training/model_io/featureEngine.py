@@ -1,8 +1,10 @@
 import abc
-from typing import Type
+from typing import Type, List
 
 import torch
 import numpy as np
+
+from training.util.tools import get_price_avg
 
 
 class FeatureEngine(abc.ABC):
@@ -12,6 +14,11 @@ class FeatureEngine(abc.ABC):
 
     @abc.abstractmethod
     def get_feature(self, observation) -> torch.Tensor:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def feature_names(self, observation) -> List[str]:
         pass
 
 
@@ -58,45 +65,7 @@ class FeatureEngineVersion1(FeatureEngine):
 
         mid_price = (observation['ap0'] + observation['bp0']) / 2
 
-        ask_price_levels = [
-            observation['ap0'] / mid_price - 1,
-            observation['ap1'] / mid_price - 1,
-            observation['ap2'] / mid_price - 1,
-            observation['ap3'] / mid_price - 1,
-            observation['ap4'] / mid_price - 1,
-        ]
-        ask_vol_levels = [
-            observation['av0'],
-            observation['av1'],
-            observation['av2'],
-            observation['av3'],
-            observation['av4'],
-        ]
-        bid_price_levels = [
-            observation['bp0'] / mid_price - 1,
-            observation['bp1'] / mid_price - 1,
-            observation['bp2'] / mid_price - 1,
-            observation['bp3'] / mid_price - 1,
-            observation['bp4'] / mid_price - 1,
-        ]
-        bid_vol_levels = [
-            observation['bv0'],
-            observation['bv1'],
-            observation['bv2'],
-            observation['bv3'],
-            observation['bv4'],
-        ]
-
-        avg_price_to_trade_list = [self.avg_price_to_trade(
-                        observation,
-                        vol_to_trade,
-                        ask_price_levels,
-                        ask_vol_levels,
-                        bid_price_levels,
-                        bid_vol_levels,
-        )
-        for vol_to_trade in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]
-        ]
+        avg_price_to_trade_list = [get_price_avg(observation, vol_to_trade)/mid_price - 1 for vol_to_trade in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5] ]
 
         feature_tensor = torch.tensor([
             observation['code_net_position'] / 100,
@@ -142,43 +111,46 @@ class FeatureEngineVersion1(FeatureEngine):
     def mid_price_relative(self, observation):
         return (observation['ap0'] + observation['bp0']) / ( 2 * observation['ap0_t0']) - 1
 
-    def avg_price_to_trade(self,
-                           observation,
-                           vol_to_trade: int,
-                           ask_price_levels,
-                           ask_vol_levels,
-                           bid_price_levels,
-                           bid_vol_levels,
-                           ):
-
-        abs_vol = abs(vol_to_trade)
-
-        if abs_vol > 10 or vol_to_trade == 0:
-            raise ValueError(f"Feature Error|avg_price_to_trade|{vol_to_trade}|{observation}")
-
-        total_cost = 0
-        if vol_to_trade > 0:
-            for ap, av in zip(ask_price_levels, ask_vol_levels):
-                if vol_to_trade > av:
-                    vol_to_trade -= av
-                    total_cost += av * ap
-                else:
-                    total_cost += vol_to_trade * ap
-                    break
-
-        elif vol_to_trade < 0:
-            vol_to_trade = -vol_to_trade
-            for bp, bv in zip(bid_price_levels, bid_vol_levels):
-                if vol_to_trade > bv:
-                    vol_to_trade -= bv
-                    total_cost += bv * bp
-                else:
-                    total_cost += vol_to_trade * bp
-                    break
-
-        return total_cost / abs_vol
+    @property
+    def feature_names(self):
+        return ['pos', 'sig0', 'sig1', 'sig2', 'time', 'logPrice', 'midPrice'] + [f'avgPrice{vol}' for vol in[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
 
 
+class FeatureEngineVersion2(FeatureEngineVersion1):
+    
+    def get_input_shape(self):
+        return 24
 
+    def get_feature(self, observation) -> torch.Tensor:
+
+        mid_price = (observation['ap0'] + observation['bp0']) / 2
+
+        avg_price_to_trade_list = [get_price_avg(observation, vol_to_trade)/mid_price for vol_to_trade in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5] ]
+
+        feature_tensor = torch.tensor([
+            self.relative_time(observation),
+            self.price_log(observation),
+            self.mid_price_relative(observation),
+            observation['code_net_position'] / 100,
+            observation['signal0'],
+            observation['signal1'],
+            observation['signal2'],
+            observation['signal0_rank'] * 2 - 1,
+            observation['signal1_rank'] * 2 - 1, 
+            observation['signal2_rank'] * 2 - 1,
+            observation['signal0_mean'],
+            observation['signal1_mean'],
+            observation['signal2_mean'],      
+            observation['mid_price_std'],
+            *avg_price_to_trade_list,
+        ],
+            dtype=torch.float32,
+        )
+
+        return feature_tensor
+
+    @property
+    def feature_names(self):
+        return ['time', 'logPrice', 'midPrice', 'pos', 'sig0', 'sig1', 'sig2', 'sig0_rank', 'sig1_rank', 'sig2_rank', 'sig0_avg', 'sig1_avg', 'sig2_avg', 'priceStd'] + [f'avg_price_{vol}' for vol in[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
 
 
