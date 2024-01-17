@@ -271,7 +271,7 @@ class TrainingStockEnv(Game):
         self._code_pos_path = []
         self._code_price_path = []
         self._code_reward_accum_path = []
-        self.info_acc = InfoAccumulator()
+        self.info_acc = InfoAccumulator(daily_reward_accum=self.info_acc.daily_reward_accum)
 
         return obs, None, info
 
