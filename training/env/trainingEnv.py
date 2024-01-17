@@ -1,14 +1,15 @@
+import csv
 import os
 import random
 import sys
-import csv
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict
 
 import math
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from training.model_io.output_wrapper import ActionType
 from training.util.logger import logger
@@ -17,13 +18,6 @@ CURRENT_PATH = str(Path(__file__).resolve().parent.parent)
 stock_path = os.path.join(CURRENT_PATH, 'env/stock_raw')
 sys.path.append(stock_path)
 
-TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
-TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
-TRAIN_DATA_PATH = TRAINING_DATA_5SEC
-CODE_TO_PLOT = [486.0, 218.0, 143.0, 492.0]
-
-from env.utils.box import Box
-from env.utils.discrete import Discrete
 from env.simulators.game import Game
 from env.stock_raw.backtest.utils import ParquetFile
 from env.stock_raw.mock_market_common.mock_market_data_cython import MockMarketDataCython
@@ -31,6 +25,29 @@ from env.stock_raw.envs.stock_base_env_cython import StockBaseEnvCython
 from env.stock_raw.utils import Order
 from training.reward.dummy_reward import cal_reward as dummy_reward
 from training.util.tools import get_rank
+
+TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
+TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
+TRAIN_DATA_PATH = TRAINING_DATA_5SEC
+CODE_TO_PLOT = [486.0, 218.0, 143.0, 492.0]
+
+
+@dataclass
+class InfoAccumulator:
+    sig0_queue: list = field(default_factory=list)
+    sig1_queue: list = field(default_factory=list)
+    sig2_queue: list = field(default_factory=list)
+    mid_price_queue: list = field(default_factory=list)
+    code_reward_accum: float = 0
+    daily_reward_accum: float = 0
+
+    def log(self, mid_price, sig0, sig1, sig2, reward):
+        self.sig0_queue.append(sig0)
+        self.sig1_queue.append(sig1)
+        self.sig2_queue.append(sig2)
+        self.mid_price_queue.append(mid_price)
+        self.code_reward_accum += reward
+        self.daily_reward_accum += reward
 
 
 class TrainingStockEnv(Game):
@@ -43,7 +60,7 @@ class TrainingStockEnv(Game):
             save_code_metric=False,
             reward_fn: Callable[[int, Dict, Dict, ActionType], float] = dummy_reward,
             data_path=TRAIN_DATA_PATH,
-            dates = 'ALL',
+            dates='ALL',
     ):
 
         super(TrainingStockEnv, self).__init__(
@@ -60,7 +77,10 @@ class TrainingStockEnv(Game):
         self._save_daily_metric = save_daily_metric
         if save_daily_metric:
             with open(os.path.join(self.save_metric_path, "daily_metric.csv"), 'w', newline='') as f:
-                self._daily_metric_writer = csv.DictWriter(f, fieldnames=['date', 'code_nums', 'day_pnl', 'daily_return', 'day_handling_fee', 'day_total_orders_num', 'day_total_orders_volume'])
+                self._daily_metric_writer = csv.DictWriter(f,
+                                                           fieldnames=['date', 'code_nums', 'day_pnl', 'daily_return',
+                                                                       'day_handling_fee', 'day_total_orders_num',
+                                                                       'day_total_orders_volume'])
                 self._daily_metric_writer.writeheader()
         if save_code_metric and not os.path.exists(os.path.join(save_metric_path, 'code_metric')):
             os.makedirs(os.path.join(save_metric_path, 'code_metric'))
@@ -81,16 +101,11 @@ class TrainingStockEnv(Game):
             dateList.sort()
             self._dateIter = OrderedIterator(dateList)
 
-        self.codes_to_log = CODE_TO_PLOT 
+        self.codes_to_log = CODE_TO_PLOT
         self._code_pos_path = []
         self._code_price_path = []
         self._code_reward_accum_path = []
-        self._mid_price_queue = []
-        self._sig0_queue = []
-        self._sig1_queue = []
-        self._sig2_queue = []
-        self._code_reward_accum = 0
-        self._daily_reward_accum = 0
+        self.info_acc = InfoAccumulator()
         self._current_env = None
         self._step_cnt = 0
         self._step_cnt_except_this_episode = 0
@@ -128,8 +143,10 @@ class TrainingStockEnv(Game):
                     f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
 
         if self.save_code_metric:
-            with open(os.path.join(self.save_metric_path, 'code_metric',f"{date}.csv"), 'a', newline='') as f:
-                code_metric_writer = csv.DictWriter(f, fieldnames=['code', 'time', 'code_net_position', 'code_pnl', 'code_cash_pnl', 'code_positional_pnl', 'code_handling_fee', 'ap0_t0', 'reward'])
+            with open(os.path.join(self.save_metric_path, 'code_metric', f"{date}.csv"), 'a', newline='') as f:
+                code_metric_writer = csv.DictWriter(f, fieldnames=['code', 'time', 'code_net_position', 'code_pnl',
+                                                                   'code_cash_pnl', 'code_positional_pnl',
+                                                                   'code_handling_fee', 'ap0_t0', 'reward'])
                 code_metric_writer.writeheader()
 
         self._reset_cnt += 1
@@ -150,12 +167,6 @@ class TrainingStockEnv(Game):
         except ValueError as v:
             raise ValueError(f'Current game terminate early', v)
 
-        # Record all signal values for current code
-        self._mid_price_queue.append((obs['ap0'] + obs['bp0']) / 2)
-        self._sig0_queue.append(obs['signal0'])
-        self._sig1_queue.append(obs['signal1'])
-        self._sig2_queue.append(obs['signal2'])
-        
         # Get reward
         # Note that if the game is done in this step, the reward should be calculated based on the last observation of
         # this episode.
@@ -166,15 +177,14 @@ class TrainingStockEnv(Game):
             self._last_obs,
             {**obs, **info},
             action,
-            
         )
+        # Record all signal values for current code
+        self.info_acc.log((obs['ap0'] + obs['bp0']) / 2, obs['signal0'], obs['signal1'], obs['signal2'], reward)
 
-        self._code_reward_accum += reward
-        self._daily_reward_accum += reward
         if obs['code'] in self.codes_to_log:
             self._code_pos_path.append(obs['code_net_position'])
-            self._code_reward_accum_path.append(self._code_reward_accum)
-            self._code_price_path.append((obs['ap0'] + obs['bp0'])/2/obs['ap0_t0'])
+            self._code_reward_accum_path.append(self.info_acc.code_reward_accum)
+            self._code_price_path.append((obs['ap0'] + obs['bp0']) / 2 / obs['ap0_t0'])
 
         # Handling when done:
         # 0: not done, 1: done in this file, 2: done for this code of stock
@@ -184,37 +194,35 @@ class TrainingStockEnv(Game):
         if done == 2:
             # current code is done, reset the current env
             obs, _, info = self.reset_code(obs, info)
-        
+
         elif done == 1:
             # current file is done, reset whole thing
             if self._save_daily_metric:
                 with open(os.path.join(self.save_metric_path, "daily_metric.csv"), 'a', newline='') as f:
-                    daily_metric_writer = csv.DictWriter(f, fieldnames=['date', 'code_nums', 'day_pnl', 'daily_return', 'day_handling_fee', 'day_total_orders_num', 'day_total_orders_volume'])
+                    daily_metric_writer = csv.DictWriter(f, fieldnames=['date', 'code_nums', 'day_pnl', 'daily_return',
+                                                                        'day_handling_fee', 'day_total_orders_num',
+                                                                        'day_total_orders_volume'])
                     daily_metric_writer.writerow(self._current_env.get_backtest_metric())
             self._deal_code_plot(obs['code'])
-            
+
             obs, _, info = self.reset()
             self._step_cnt_except_this_episode = self._step_cnt
             self._episode_cnt += 1
-            self._code_reward_accum = 0
-            self._daily_reward_accum = 0
+
+            self.info_acc = InfoAccumulator()
 
             self._code_pos_path = []
             self._code_price_path = []
             self._code_reward_accum_path = []
-            self._mid_price_queue = []
-            self._sig0_queue = []
-            self._sig1_queue = []
-            self._sig2_queue = []
 
-        if len(self._sig0_queue) > 240:
-            info['signal0_rank'] = get_rank(self._sig0_queue[-240:], obs['signal0']) / 240
-            info['signal1_rank'] = get_rank(self._sig1_queue[-240:], obs['signal1']) / 240
-            info['signal2_rank'] = get_rank(self._sig2_queue[-240:], obs['signal2']) / 240
-            info['signal0_mean'] = np.mean(self._sig0_queue)
-            info['signal1_mean'] = np.mean(self._sig1_queue)
-            info['signal2_mean'] = np.mean(self._sig2_queue)
-            info['mid_price_std'] = np.std(np.array(self._mid_price_queue[-240:])/obs['ap0_t0'])
+        if len(self.info_acc.sig0_queue) > 240:
+            info['signal0_rank'] = get_rank(self.info_acc.sig0_queue[-240:], obs['signal0']) / 240
+            info['signal1_rank'] = get_rank(self.info_acc.sig1_queue[-240:], obs['signal1']) / 240
+            info['signal2_rank'] = get_rank(self.info_acc.sig2_queue[-240:], obs['signal2']) / 240
+            info['signal0_mean'] = np.mean(self.info_acc.sig0_queue)
+            info['signal1_mean'] = np.mean(self.info_acc.sig1_queue)
+            info['signal2_mean'] = np.mean(self.info_acc.sig2_queue)
+            info['mid_price_std'] = np.std(np.array(self.info_acc.mid_price_queue[-240:]) / obs['ap0_t0'])
         else:
             info['signal0_rank'] = 0.5
             info['signal1_rank'] = 0.5
@@ -230,55 +238,53 @@ class TrainingStockEnv(Game):
         return observation, reward, done
 
     def reset_code(self, obs, info):
-            
-            logger.debug(f'current code is done, reset the current env,'
-                         f'current step count: {self._step_cnt}, '
-                         f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
-            
-            if self.save_code_metric:
-                metric_to_log = {
-                    'code': obs['code'],
-                    'time': obs['eventTime'],
-                    'code_net_position': info['code_net_position'], 
-                    'code_pnl': info['code_pnl'],
-                    'code_cash_pnl': info['code_cash_pnl'], 
-                    'code_positional_pnl': info['code_positional_pnl'], 
-                    'code_handling_fee': info['code_handling_fee'], 
-                    'ap0_t0': info['ap0_t0'],
-                    'reward': self._code_reward_accum,
-                }
-                with open(os.path.join(self.save_metric_path, 'code_metric',f"{self._current_env.date}.csv"), 'a', newline='') as f:
-                    code_metric_writer = csv.DictWriter(f, fieldnames=['code', 'time', 'code_net_position', 'code_pnl', 'code_cash_pnl', 'code_positional_pnl', 'code_handling_fee', 'ap0_t0', 'reward'])
-                    code_metric_writer.writerow(metric_to_log)
 
-                self._deal_code_plot(obs['code'])
+        logger.debug(f'current code is done, reset the current env,'
+                     f'current step count: {self._step_cnt}, '
+                     f'step done in this episode: {self._step_cnt - self._step_cnt_except_this_episode}')
 
-            obs, _, info = self._current_env.reset()
-            self._step_cnt_except_this_episode = self._step_cnt
-            self._episode_cnt += 1
-            self._code_reward_accum = 0
+        if self.save_code_metric:
+            metric_to_log = {
+                'code': obs['code'],
+                'time': obs['eventTime'],
+                'code_net_position': info['code_net_position'],
+                'code_pnl': info['code_pnl'],
+                'code_cash_pnl': info['code_cash_pnl'],
+                'code_positional_pnl': info['code_positional_pnl'],
+                'code_handling_fee': info['code_handling_fee'],
+                'ap0_t0': info['ap0_t0'],
+                'reward': self.info_acc.code_reward_accum,
+            }
+            with open(os.path.join(self.save_metric_path, 'code_metric', f"{self._current_env.date}.csv"), 'a',
+                      newline='') as f:
+                code_metric_writer = csv.DictWriter(f, fieldnames=['code', 'time', 'code_net_position', 'code_pnl',
+                                                                   'code_cash_pnl', 'code_positional_pnl',
+                                                                   'code_handling_fee', 'ap0_t0', 'reward'])
+                code_metric_writer.writerow(metric_to_log)
 
-            self._code_pos_path = []
-            self._code_price_path = []
-            self._code_reward_accum_path = []
-            self._sig0_queue = []
-            self._sig1_queue = []
-            self._sig2_queue = []
+            self._deal_code_plot(obs['code'])
 
-            return obs, None, info
+        obs, _, info = self._current_env.reset()
+        self._step_cnt_except_this_episode = self._step_cnt
+        self._episode_cnt += 1
 
+        self._code_pos_path = []
+        self._code_price_path = []
+        self._code_reward_accum_path = []
+        self.info_acc = InfoAccumulator()
 
-        
+        return obs, None, info
+
     def _deal_code_plot(self, code):
         if code in self.codes_to_log:
             fig, ax = plt.subplots()
-            ax.plot(np.array(self._code_pos_path)/300, label='net_position')
-            ax.plot( (np.array(self._code_price_path) - 1) * 10, label = 'price')
+            ax.plot(np.array(self._code_pos_path) / 300, label='net_position')
+            ax.plot((np.array(self._code_price_path) - 1) * 10, label='price')
             ax.set_ylim(-1.0, 1.0)
             ax2 = ax.twinx()
-            ax2.plot( self._code_reward_accum_path, label='reward_accum', color='plum')
+            ax2.plot(self._code_reward_accum_path, label='reward_accum', color='plum')
             fig.legend(loc='upper left')
-            fig.savefig(os.path.join(self.save_metric_path, 'code_metric',f"{self._current_env.date}_{int(code)}.png"))
+            fig.savefig(os.path.join(self.save_metric_path, 'code_metric', f"{self._current_env.date}_{int(code)}.png"))
 
     def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
         assert obs_after['code'] == obs_before['code']
@@ -300,14 +306,12 @@ class TrainingStockEnv(Game):
         stats['day_pnl_mean'] = df.loc[:, 'day_pnl'].mean()
         stats['daily_return_mean'] = df.loc[:, 'daily_return'].mean()
         stats['code_nums_mean'] = df.loc[:, 'code_nums'].mean()
-        stats['day_total_orders_volume_mean'] = df.loc[:,
-                                                'day_total_orders_volume'].mean()
+        stats['day_total_orders_volume_mean'] = df.loc[:, 'day_total_orders_volume'].mean()
 
         has_traded = days_traded != 0
         stats['win_rate'] = days_win / float(days_traded) if has_traded else 0
         pnl_total_sum = df.loc[:, 'day_pnl'].sum()
-        stats['day_traded_pnl_mean'] = pnl_total_sum / \
-                                       days_traded if has_traded else 0
+        stats['day_traded_pnl_mean'] = pnl_total_sum / days_traded if has_traded else 0
         pnl_std = df.loc[:, 'day_pnl'].std(ddof=0)
 
         std_net_pnl = df.loc[:, 'day_pnl'].std(ddof=0)
@@ -317,13 +321,10 @@ class TrainingStockEnv(Game):
             250) * stats['day_pnl_mean'] / pnl_std if std_net_pnl_is_valid else 1
 
         fee_sum = df.loc[:, 'day_handling_fee'].sum()
-        stats['day_handling_fee_mean'] = fee_sum / \
-                                         days_traded if has_traded else 0
+        stats['day_handling_fee_mean'] = fee_sum / days_traded if has_traded else 0
         if stats['day_pnl_mean'] >= 0:
-            stats['daily_return_mean_sharped'] = stats['daily_return_mean'] * \
-                                                 min(10, stats['sharpe']) / 10
-            stats['daily_pnl_mean_sharped'] = stats['day_pnl_mean'] * \
-                                              min(10, stats['sharpe']) / 10
+            stats['daily_return_mean_sharped'] = stats['daily_return_mean'] * min(10, stats['sharpe']) / 10
+            stats['daily_pnl_mean_sharped'] = stats['day_pnl_mean'] * min(10, stats['sharpe']) / 10
         else:
             stats['daily_return_mean_sharped'] = stats['daily_return_mean']
             stats['daily_pnl_mean_sharped'] = stats['day_pnl_mean']
@@ -341,11 +342,11 @@ class TrainingStockEnv(Game):
     @property
     def reset_cnt(self):
         return self._reset_cnt
-    
+
     @property
     def date(self):
         return self._current_env.date
-    
+
 
 class RandomIterator:
     def __init__(self, data):
@@ -370,7 +371,7 @@ class RandomIterator:
 
     def __len__(self):
         return len(self.data)
-    
+
 
 class OrderedIterator:
     def __init__(self, data):
