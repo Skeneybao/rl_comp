@@ -62,7 +62,7 @@ def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, actio
     elif side == 0:
         return (after_mid_price - trade_price_avg) / trade_price_avg
     # sell
-    elif side == 1:
+    elif side == 2:
         return (trade_price_avg - after_mid_price) / trade_price_avg
 
     else:
