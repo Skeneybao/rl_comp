@@ -1,5 +1,7 @@
 from typing import Dict, List
 
+import numpy as np
+
 
 def get_rank(data: List, target):
     
@@ -11,7 +13,7 @@ def get_rank(data: List, target):
     return rank 
     
 
-def get_price_avg(observation: Dict, vol_to_trade: int):
+def get_price_avg(observation: Dict, vol_to_trade: float):
     """
     vol_to_trade > 0 : BUY
     vol_to_trade < 0 : SELL
@@ -19,7 +21,7 @@ def get_price_avg(observation: Dict, vol_to_trade: int):
 
     abs_vol = abs(vol_to_trade)
 
-    if abs_vol > 10 or vol_to_trade == 0:
+    if abs_vol > 10 or np.allclose(vol_to_trade, 0):
         raise ValueError(f"Feature Error|avg_price_to_trade|{vol_to_trade}")
     
     ask_price_levels = [
