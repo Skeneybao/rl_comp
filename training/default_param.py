@@ -1,6 +1,6 @@
 default_param = {
     ## control
-    'episode_num': 10_000,
+    'episode_num': 40_000,
     'learning_period': 16,
 
     ## env param
@@ -25,14 +25,14 @@ default_param = {
     ## actor config
     'actor_config$eps_start': 0.9,
     'actor_config$eps_end': 0.05,
-    'actor_config$eps_decay': 1e6,
+    'actor_config$eps_decay': 5627937.9401492765,
 
     ## learner config
-    'learner_config$batch_size': 128,
+    'learner_config$batch_size': 256,
     'learner_config$gamma': 0.99,
     'learner_config$tau': 0.005,
-    'learner_config$lr': 1e-5,
-    'learner_config$optimizer_type': 'SGD',
+    'learner_config$lr': 2.1409775642148664e-7,
+    'learner_config$optimizer_type': 'AdamW',
     'learner_config$model_save_step': 20000,
     'learner_config$minimal_buffer_size': 2000,
 }
