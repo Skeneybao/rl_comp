@@ -2,8 +2,10 @@ from typing import Dict
 import math
 
 from training.model_io.output_wrapper import ActionType
+from training.reward.get_reward import register_reward
 
 
+@register_reward('dummy')
 def cal_reward(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
     """
     return empty reward

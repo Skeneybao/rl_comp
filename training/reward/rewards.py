@@ -1,10 +1,13 @@
 from typing import Dict
+
 import numpy as np
 
 from training.model_io.output_wrapper import ActionType
+from training.reward.get_reward import register_reward
 from training.util.tools import get_price_avg
 
 
+@register_reward('normalized_net_return')
 def normalized_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
     """
     calculate reward by normalized net return
@@ -43,8 +46,8 @@ def normalized_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, ac
     return (obs_after['code_pnl'] - obs_before['code_pnl']) / obs_after['ap0_t0']
 
 
+@register_reward('short_sight_return')
 def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
-
     # Here we assume 'vol' can be traded given the 'price'
     side, vol, price = action
 
@@ -66,19 +69,17 @@ def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, actio
         raise ValueError("Unknown trading side")
 
 
+@register_reward('long_short_sight_return')
 def long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, divd=10) -> float:
-
     long_sight_reward = normalized_net_return(steps_done, obs_after, obs_after, action)
     short_sight_reward = short_sight_return(steps_done, obs_after, obs_after, action)
-    
+
     return long_sight_reward / divd + short_sight_reward
 
 
+@register_reward('log_long_short_sight_return')
 def log_long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
-
     long_sight_reward = normalized_net_return(steps_done, obs_after, obs_after, action)
     short_sight_reward = short_sight_return(steps_done, obs_after, obs_after, action)
-    
+
     return np.log(long_sight_reward + 1) + np.log(short_sight_reward + 1)
-
-
