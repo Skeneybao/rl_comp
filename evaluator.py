@@ -26,7 +26,7 @@ class EvaluatorConfig:
     data_path: str = '/home/rl-comp/Git/rl_comp/env/stock_raw/data'
     date: str = 'ALL'
     reward_fn: Callable[[int, Dict, Dict, ActionType], float] = cal_reward
-    device: str = 'cuda'
+    device: str = 'cpu'
 
 
 def evaluate_model(config: EvaluatorConfig):
