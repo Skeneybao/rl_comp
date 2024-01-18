@@ -219,9 +219,9 @@ class TrainingStockEnv(Game):
             info['signal0_rank'] = get_rank(self.info_acc.sig0_queue[-240:], obs['signal0']) / 240
             info['signal1_rank'] = get_rank(self.info_acc.sig1_queue[-240:], obs['signal1']) / 240
             info['signal2_rank'] = get_rank(self.info_acc.sig2_queue[-240:], obs['signal2']) / 240
-            info['signal0_mean'] = np.mean(self.info_acc.sig0_queue)
-            info['signal1_mean'] = np.mean(self.info_acc.sig1_queue)
-            info['signal2_mean'] = np.mean(self.info_acc.sig2_queue)
+            info['signal0_mean'] = sum(self.info_acc.sig0_queue) / len(self.info_acc.sig0_queue)
+            info['signal1_mean'] = sum(self.info_acc.sig1_queue) / len(self.info_acc.sig1_queue)
+            info['signal2_mean'] = sum(self.info_acc.sig2_queue) / len(self.info_acc.sig2_queue)
             info['mid_price_std'] = np.std(np.array(self.info_acc.mid_price_queue[-240:]) / obs['ap0_t0'])
         else:
             info['signal0_rank'] = 0.5

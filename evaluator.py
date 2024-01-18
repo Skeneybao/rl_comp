@@ -26,6 +26,7 @@ class EvaluatorConfig:
     data_path: str = '/home/rl-comp/Git/rl_comp/env/stock_raw/data'
     date: str = 'ALL'
     reward_fn: Callable[[int, Dict, Dict, ActionType], float] = cal_reward
+    device: str = 'cuda'
 
 
 def evaluate_model(config: EvaluatorConfig):
@@ -52,7 +53,7 @@ def evaluate_model(config: EvaluatorConfig):
         **config.model_param)
     checkpoint = torch.load(os.path.join(config.training_res_path, 'models', config.model_name))
     model.load_state_dict(checkpoint['model_state_dict'])
-    model_output_wrapper = Action11OutputWrapper(model)
+    model_output_wrapper = Action11OutputWrapper(model, device=config.device)
 
     obs, _, _ = env.reset()
 
