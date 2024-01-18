@@ -35,7 +35,6 @@ if __name__ == '__main__':
     SAVING_PREFIX = '/mnt/data3/rl-data/training_res'
 
     # Gen exp info & metadata
-
     #################################
     # init exp
     #################################
@@ -100,7 +99,6 @@ if __name__ == '__main__':
     )
 
     # debug
-
     logger.warning(f"exp_info: {exp_info}")
     logger.warning(f"control_param: {control_param}")
     logger.warning(f"env_param: {env_param}")
