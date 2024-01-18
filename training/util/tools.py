@@ -4,14 +4,22 @@ import numpy as np
 
 
 def get_rank(data: List, target):
-    
     rank = 0
     for val in data:
         if val < target:
             rank += 1
 
-    return rank 
-    
+    return rank
+
+
+def std(data):
+    if len(data) < 2:
+        raise ValueError("Standard deviation requires at least two data points")
+
+    mean = sum(data) / len(data)
+    variance = sum((x - mean) ** 2 for x in data) / (len(data) - 1)
+    return variance ** 0.5
+
 
 def get_price_avg(observation: Dict, vol_to_trade: float):
     """
@@ -21,9 +29,9 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
 
     abs_vol = abs(vol_to_trade)
 
-    if abs_vol > 10 or np.allclose(vol_to_trade, 0):
+    if abs_vol > 10 or vol_to_trade == 0:
         raise ValueError(f"Feature Error|avg_price_to_trade|{vol_to_trade}")
-    
+
     ask_price_levels = [
         observation['ap0'],
         observation['ap1'],
@@ -74,4 +82,3 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
                 break
 
     return total_cost / abs_vol
-

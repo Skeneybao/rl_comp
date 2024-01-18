@@ -12,9 +12,10 @@ ActionType = Tuple[int, float, float]
 
 class ModelOutputWrapper(abc.ABC):
 
-    def __init__(self, model: nn.Module, refresh_model_steps: int = 32):
+    def __init__(self, model: nn.Module, refresh_model_steps: int = 32, device: str = 'cpu'):
         self.model_base = model
-        self.model = deepcopy(model).to('cpu')
+        self.device = device
+        self.model = deepcopy(model).to(device)
         self.refresh_model_steps = refresh_model_steps
         self._refresh_count = 0
 
@@ -70,7 +71,7 @@ class Action11OutputWrapper(ModelOutputWrapper):
         
         # 0. inference
         with torch.no_grad():
-            model_output = self.model(model_input)
+            model_output = self.model(model_input.to(self.device))
         # 1. postprocess output
         action = self.action_id_to_action(model_output.argmax(-1).item(), observation)
 
