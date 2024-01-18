@@ -53,13 +53,11 @@ def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, actio
 
     before_mid_price = (obs_before['ap0'] + obs_before['bp0']) / 2
     after_mid_price = (obs_after['ap0'] + obs_after['bp0']) / 2
-
-    trade_price_avg = get_price_avg(obs_before, vol)
     # noop
     if side == 1:
         return 0
-    # buy
-    elif side == 0:
+    trade_price_avg = get_price_avg(obs_before, vol)
+    if side == 0:
         return (after_mid_price - trade_price_avg) / trade_price_avg
     # sell
     elif side == 2:
