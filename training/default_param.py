@@ -5,7 +5,7 @@ default_param = {
 
     ## env param
     'env$mode': 'ordered',
-    'env$reward_fn': 'normalized_net_return',
+    'env$reward_fn': 'short_sight_return',
 
     ## feature engine param
     'feature_engine_type': 'version1',
