@@ -1,3 +1,4 @@
+import atexit
 import multiprocessing
 import os
 from collections import deque
@@ -122,6 +123,14 @@ if __name__ == '__main__':
     eval_processes = deque()
     result_queue = multiprocessing.Queue()
     result_dict = {}
+
+
+    def cleanup():
+        for process in eval_processes:
+            process.terminate()
+
+
+    atexit.register(cleanup)
 
     while env.episode_cnt < control_param.training_episode_num:
         actor.step()
