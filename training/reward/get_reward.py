@@ -25,4 +25,5 @@ def get_reward(fn_name: str) -> Callable[[int, Dict, Dict, ActionType], float]:
     try:
         return register[fn_name]
     except KeyError:
+        print(register)
         raise ValueError(f'Unknown reward function name: {fn_name}')
