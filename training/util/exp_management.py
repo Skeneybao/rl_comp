@@ -44,7 +44,10 @@ def get_git_info() -> (str, str, bool):
 
 
 def get_exp_info() -> ExpInfo:
-    git_branch, git_commit, git_clean = get_git_info()
+    try:
+        git_branch, git_commit, git_clean = get_git_info()
+    except subprocess.CalledProcessError:
+        git_branch, git_commit, git_clean = 'unknown', 'unknown', False
     nni_exp_id = nni.get_experiment_id()
     nni_trial_id = nni.get_trial_id()
     return ExpInfo(
