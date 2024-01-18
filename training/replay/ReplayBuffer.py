@@ -3,18 +3,17 @@ from collections import deque
 
 
 class ReplayBuffer:
-    def __init__(self, capacity: int, replay_by: str = 'random'):
-        assert replay_by in ['random', 'ordered']
+    def __init__(self, capacity: int):
         self.memory = deque(maxlen=capacity)
-        self.replay_by = replay_by
 
     def push(self, data):
         self.memory.append(data)
 
-    def sample(self, batch_size):
-        if self.replay_by == 'random':
+    def sample(self, batch_size, replay_by: str = 'random'):
+        assert replay_by in ['random', 'ordered']
+        if replay_by == 'random':
             return self.sample_random(batch_size)
-        elif self.replay_by == 'ordered':
+        elif replay_by == 'ordered':
             return self.sample_ordered(batch_size)
         else:
             raise NotImplementedError
