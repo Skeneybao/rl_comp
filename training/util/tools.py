@@ -63,6 +63,8 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
 
     total_cost = 0
     if vol_to_trade > 0:
+        if sum(ask_vol_levels) == 0:
+            return 0
         for ap, av in zip(ask_price_levels, ask_vol_levels):
             if vol_to_trade > av:
                 vol_to_trade -= av
@@ -73,6 +75,8 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
 
     elif vol_to_trade < 0:
         vol_to_trade = -vol_to_trade
+        if sum(bid_vol_levels) == 0:
+            return 0
         for bp, bv in zip(bid_price_levels, bid_vol_levels):
             if vol_to_trade > bv:
                 vol_to_trade -= bv
