@@ -56,15 +56,18 @@ def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, actio
     # noop
     if side == 1:
         return 0
-    trade_price_avg = get_price_avg(obs_before, vol)
-    if side == 0:
-        return (after_mid_price - trade_price_avg) / trade_price_avg
-    # sell
-    elif side == 2:
-        return (trade_price_avg - after_mid_price) / trade_price_avg
+    trade_price_avg = get_price_avg(obs_before, vol * (1 if side == 0 else -1))
+    try:
+        if side == 0:
+            return (after_mid_price - trade_price_avg) / trade_price_avg
+        # sell
+        elif side == 2:
+            return (trade_price_avg - after_mid_price) / trade_price_avg
 
-    else:
-        raise ValueError("Unknown trading side")
+        else:
+            raise ValueError("Unknown trading side")
+    except ZeroDivisionError:
+        raise ValueError(f"Feature Error|short_sight_return|{trade_price_avg}|{after_mid_price}|{action}|{obs_before}")
 
 
 @register_reward('long_short_sight_return')
