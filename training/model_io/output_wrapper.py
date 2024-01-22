@@ -7,6 +7,9 @@ import torch
 import torch.nn as nn
 
 # side, vol, price
+# side = 0: buy
+# side = 1: noop
+# side = 2: sell
 ActionType = Tuple[int, float, float]
 
 
