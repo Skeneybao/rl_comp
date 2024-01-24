@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+
 import training.DQN.learner
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import DQNLearner, LearnerConfig
@@ -43,7 +45,7 @@ class LearnerTestCase(unittest.TestCase):
 
         losses = [learner.step() for _ in range(1000)]
 
-        self.assertGreater(losses[0], losses[-1])
+        self.assertGreater(np.mean(losses[:10]), np.mean(losses[-10:]))
 
     def test_update_target_model(self):
         feature_engine = FeatureEngineDummy()
