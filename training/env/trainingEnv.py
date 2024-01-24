@@ -288,7 +288,11 @@ class TrainingStockEnv(Game):
 
     def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
         assert obs_after['code'] == obs_before['code']
-        return self.reward_fn(step_this_episode, obs_before, obs_after, action)
+        try:
+            return self.reward_fn(step_this_episode, obs_before, obs_after, action)
+        except ValueError as e:
+            raise ValueError(f'Error in get_reward, step_this_episode: {step_this_episode}, '
+                             f'obs_before: {obs_before}, obs_after: {obs_after}, action: {action}', e)
 
     def is_terminal(self):
         return False
