@@ -35,4 +35,5 @@ default_param = {
     'learner_config$optimizer_type': 'AdamW',
     'learner_config$model_save_step': 20000,
     'learner_config$minimal_buffer_size': 2000,
+    'learner_config$reward_steps': 5,
 }
