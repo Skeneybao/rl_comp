@@ -25,7 +25,7 @@ class LearnerConfig:
     # not start training until replay buffer has at least this number of transitions
     minimal_buffer_size: int = 1000
 
-    reward_steps: int = 1
+    reward_steps: int = 5
 
 
 class Learner(abc.ABC):
@@ -91,6 +91,9 @@ class DQNLearner(Learner):
         return optimizer
 
     def step(self) -> Optional[float]:
+        return self.step_multiple()
+
+    def step_single(self) -> Optional[float]:
         """
         Run a single optimization step of a batch.
         """
@@ -139,7 +142,6 @@ class DQNLearner(Learner):
 
         return loss.item()
 
-
     def step_multiple(self) -> Optional[float]:
         """
         Run a single optimization step of a batch with multiple step reward.
@@ -172,7 +174,45 @@ class DQNLearner(Learner):
             next_state_batch.append(final_state)
             done_batch.append(done)
 
+        state_batch = torch.stack(state_batch).to(self.config.device)
+        action_batch = torch.stack(action_batch).argmax(1).unsqueeze(1).to(self.config.device)
+        reward_batch = torch.tensor(reward_batch).to(self.config.device)
+        next_state_batch = torch.stack(next_state_batch).to(self.config.device)
+        done_batch = torch.tensor(done_batch).to(self.config.device)
 
+        non_final_mask = done_batch != 0
+        non_final_next_states = next_state_batch[non_final_mask]
+
+        # Q(s_t, a)
+        state_action_values = self.model(state_batch).gather(1, action_batch)
+
+        # V(s_{t+n}) = max_a Q(s_{t+n}, a)
+        next_state_values = torch.zeros(self.config.batch_size, device=self.config.device)
+        with torch.no_grad():
+            next_state_values[non_final_mask] = self.target_model(non_final_next_states).max(1)[0].detach()
+        # expected Q values with n-step rewards
+        expected_state_action_values = (next_state_values * (
+                self.config.gamma ** self.config.reward_steps)) + reward_batch
+
+        # Huber loss
+        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
+
+        # optimize
+        self.optimizer.zero_grad()
+        loss.backward()
+        # grad clipping
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 100)
+        self.optimizer.step()
+
+        self.step_cnt += 1
+
+        if self.saving and self.step_cnt % self.config.model_save_step == 0:
+            path = os.path.join(self.model_saving_path, f'{self.step_cnt}.pt')
+            logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
+            self.save_model(path, self.model, self.optimizer)
+            self.latest_model_num = self.step_cnt
+
+        return loss.item()
 
     def update_target_model(self):
         target_params = self.target_model.state_dict()
