@@ -18,12 +18,14 @@ class LearnerConfig:
     batch_size: int = 128
     gamma: float = 0.99
     tau: float = 0.005
-    lr: float = 1e-4
+    lr: float = 1e-8
     optimizer_type: str = 'SGD'
     device: torch.device = auto_get_device()
     model_save_step: int = 1000
     # not start training until replay buffer has at least this number of transitions
     minimal_buffer_size: int = 1000
+
+    reward_steps: int = 1
 
 
 class Learner(abc.ABC):
@@ -136,6 +138,41 @@ class DQNLearner(Learner):
             self.latest_model_num = self.step_cnt
 
         return loss.item()
+
+
+    def step_multiple(self) -> Optional[float]:
+        """
+        Run a single optimization step of a batch with multiple step reward.
+        """
+        if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
+            return None
+
+        sequences = self.replay_buffer.sample_batched_ordered(self.config.batch_size, self.config.reward_steps)
+        # Prepare batches
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch = [], [], [], [], []
+        for sequence in sequences:
+            # Initialize variables for n-step calculations
+            accum_reward = 0.0
+            discount = 1.0
+            final_state = sequence[-1][3]  # The next state after n steps
+            done = False
+
+            # Accumulate reward over n steps
+            for transition in sequence:
+                state, action, reward, _, done = transition
+                accum_reward += discount * reward
+                discount *= self.config.gamma
+                if done:
+                    final_state = transition[3]  # If done, use the terminal state
+                    break
+
+            state_batch.append(state)
+            action_batch.append(action)
+            reward_batch.append(accum_reward)
+            next_state_batch.append(final_state)
+            done_batch.append(done)
+
+
 
     def update_target_model(self):
         target_params = self.target_model.state_dict()

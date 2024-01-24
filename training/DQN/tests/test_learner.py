@@ -17,7 +17,7 @@ class LearnerTestCase(unittest.TestCase):
 
     def test_optimize(self):
         feature_engine = FeatureEngineDummy()
-        model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
+        model = DNN(feature_engine.get_input_shape(), [32, 32], Action11OutputWrapper.get_output_shape())
         model_output_wrapper = Action11OutputWrapper(model)
         replay_buffer = ReplayBuffer(1024)
 
@@ -41,7 +41,7 @@ class LearnerTestCase(unittest.TestCase):
             training.DQN.learner.NOT_SAVING
         )
 
-        losses = [learner.step() for _ in range(100)]
+        losses = [learner.step() for _ in range(1000)]
 
         self.assertGreater(losses[0], losses[-1])
 
