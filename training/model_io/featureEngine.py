@@ -1,8 +1,8 @@
 import abc
-from typing import Type, List
+from typing import List
 
-import torch
 import numpy as np
+import torch
 
 from training.util.tools import get_price_avg
 
@@ -18,11 +18,15 @@ class FeatureEngine(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def feature_names(self, observation) -> List[str]:
+    def feature_names(self) -> List[str]:
         pass
 
 
 class FeatureEngineExample(FeatureEngine):
+
+    @property
+    def feature_names(self) -> List[str]:
+        return ['feature1', 'feature2', 'feature3']
 
     def __init__(self, feature_to_use=None):
         pass
@@ -47,25 +51,16 @@ class FeatureEngineExample(FeatureEngine):
         return 3
 
 
-class FeatureEngineDummy(FeatureEngine):
-
-    def get_input_shape(self):
-        return 34
-
-    def get_feature(self, observation) -> torch.Tensor:
-        return torch.tensor(list(observation.values()))
-
-
 class FeatureEngineVersion1(FeatureEngine):
 
     def get_input_shape(self):
         return 17
 
     def get_feature(self, observation) -> torch.Tensor:
-
         mid_price = (observation['ap0'] + observation['bp0']) / 2
 
-        avg_price_to_trade_list = [get_price_avg(observation, vol_to_trade)/mid_price - 1 for vol_to_trade in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5] ]
+        avg_price_to_trade_list = [get_price_avg(observation, vol_to_trade) / mid_price - 1 for vol_to_trade in
+                                   [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
 
         feature_tensor = torch.tensor([
             observation['code_net_position'] / 100,
@@ -85,7 +80,6 @@ class FeatureEngineVersion1(FeatureEngine):
         return feature_tensor
 
     def relative_time(self, observation):
-
         e_time = int(observation['eventTime']) // 1000
         hours = e_time // 10000
         minutes = (e_time // 100) % 100
@@ -99,33 +93,31 @@ class FeatureEngineVersion1(FeatureEngine):
 
         return std_time / 14400 * 2 - 1
 
-
     def price_log(self, observation):
-
         open_price = observation['ap0_t0']
         norm_price = np.log(open_price) / np.log(15000)
 
         return norm_price * 2 - 1
 
-
     def mid_price_relative(self, observation):
-        return (observation['ap0'] + observation['bp0']) / ( 2 * observation['ap0_t0']) - 1
+        return (observation['ap0'] + observation['bp0']) / (2 * observation['ap0_t0']) - 1
 
     @property
     def feature_names(self):
-        return ['pos', 'sig0', 'sig1', 'sig2', 'time', 'logPrice', 'midPrice'] + [f'avgPrice{vol}' for vol in[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
+        return ['pos', 'sig0', 'sig1', 'sig2', 'time', 'logPrice', 'midPrice'] + [f'avgPrice{vol}' for vol in
+                                                                                  [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
 
 
 class FeatureEngineVersion2(FeatureEngineVersion1):
-    
+
     def get_input_shape(self):
         return 24
 
     def get_feature(self, observation) -> torch.Tensor:
-
         mid_price = (observation['ap0'] + observation['bp0']) / 2
 
-        avg_price_to_trade_list = [get_price_avg(observation, vol_to_trade)/mid_price for vol_to_trade in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5] ]
+        avg_price_to_trade_list = [get_price_avg(observation, vol_to_trade) / mid_price for vol_to_trade in
+                                   [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
 
         feature_tensor = torch.tensor([
             self.relative_time(observation),
@@ -136,11 +128,11 @@ class FeatureEngineVersion2(FeatureEngineVersion1):
             observation['signal1'],
             observation['signal2'],
             observation['signal0_rank'] * 2 - 1,
-            observation['signal1_rank'] * 2 - 1, 
+            observation['signal1_rank'] * 2 - 1,
             observation['signal2_rank'] * 2 - 1,
             observation['signal0_mean'],
             observation['signal1_mean'],
-            observation['signal2_mean'],      
+            observation['signal2_mean'],
             observation['mid_price_std'],
             *avg_price_to_trade_list,
         ],
@@ -151,6 +143,9 @@ class FeatureEngineVersion2(FeatureEngineVersion1):
 
     @property
     def feature_names(self):
-        return ['time', 'logPrice', 'midPrice', 'pos', 'sig0', 'sig1', 'sig2', 'sig0_rank', 'sig1_rank', 'sig2_rank', 'sig0_avg', 'sig1_avg', 'sig2_avg', 'priceStd'] + [f'avg_price_{vol}' for vol in[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
+        return ['time', 'logPrice', 'midPrice', 'pos', 'sig0', 'sig1', 'sig2', 'sig0_rank', 'sig1_rank', 'sig2_rank',
+                'sig0_avg', 'sig1_avg', 'sig2_avg', 'priceStd'] + [f'avg_price_{vol}' for vol in
+                                                                   [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]]
 
 
+FeatureEngineDummy = FeatureEngineVersion1
