@@ -29,7 +29,7 @@ class ReplayBuffer:
             raise ValueError(f'Not enough data in replay buffer: {len(self.memory)} < {batch_size}')
         start_id = random.randint(0, len(self.memory) - batch_size)
         # possibly segmented by a done > 0. That is, one batch can contain multiple episodes.
-        return list(self.memory)[start_id:start_id + batch_size]
+        return [self.memory[i] for i in range(start_id, start_id + batch_size)]
 
     def sample_batched_ordered(self, batch_size: int, batch_length: int) -> Iterable[Iterable]:
         samples = []
