@@ -109,7 +109,7 @@ class DQNLearner(Learner):
         next_state_batch = torch.stack(next_state).to(self.config.device)
         done_batch = torch.tensor(done).to(self.config.device)
 
-        non_final_mask = done_batch != 0
+        non_final_mask = done_batch == 0
         non_final_next_states = next_state_batch[non_final_mask]
 
         # Q(s_t, a)
@@ -161,7 +161,7 @@ class DQNLearner(Learner):
 
             # Accumulate reward over n steps
             for transition in sequence:
-                state, action, reward, _, done = transition
+                state, model_output, reward, _, done = transition
                 accum_reward += discount * reward
                 discount *= self.config.gamma
                 if done:
@@ -169,7 +169,7 @@ class DQNLearner(Learner):
                     break
 
             state_batch.append(state)
-            action_batch.append(action)
+            action_batch.append(model_output)
             reward_batch.append(accum_reward)
             next_state_batch.append(final_state)
             done_batch.append(done)
@@ -180,7 +180,7 @@ class DQNLearner(Learner):
         next_state_batch = torch.stack(next_state_batch).to(self.config.device)
         done_batch = torch.tensor(done_batch).to(self.config.device)
 
-        non_final_mask = done_batch != 0
+        non_final_mask = done_batch == 0
         non_final_next_states = next_state_batch[non_final_mask]
 
         # Q(s_t, a)
