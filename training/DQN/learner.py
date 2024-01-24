@@ -149,7 +149,8 @@ class DQNLearner(Learner):
         if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
             return None
 
-        sequences = self.replay_buffer.sample_batched_ordered(self.config.batch_size, self.config.reward_steps)
+        sequences = self.replay_buffer.sample_batched_ordered(int(self.config.batch_size),
+                                                              int(self.config.reward_steps))
         # Prepare batches
         state_batch, action_batch, reward_batch, next_state_batch, done_batch = [], [], [], [], []
         for sequence in sequences:
