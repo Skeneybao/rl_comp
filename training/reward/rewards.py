@@ -66,21 +66,21 @@ def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, actio
 
         else:
             raise ValueError("Unknown trading side")
-    except ZeroDivisionError:
-        raise ValueError(f"Feature Error|short_sight_return|{trade_price_avg}|{after_mid_price}|{action}|{obs_before}")
+    except ZeroDivisionError as e:
+        raise ValueError(f"Feature Error|short_sight_return|{trade_price_avg}|{after_mid_price}|{action}|{obs_before}") from e
 
 
 @register_reward('long_short_sight_return')
 def long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, divd=10) -> float:
-    long_sight_reward = normalized_net_return(steps_done, obs_after, obs_after, action)
-    short_sight_reward = short_sight_return(steps_done, obs_after, obs_after, action)
+    long_sight_reward = normalized_net_return(steps_done, obs_before, obs_after, action)
+    short_sight_reward = short_sight_return(steps_done, obs_before, obs_after, action)
 
     return long_sight_reward / divd + short_sight_reward
 
 
 @register_reward('log_long_short_sight_return')
 def log_long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
-    long_sight_reward = normalized_net_return(steps_done, obs_after, obs_after, action)
-    short_sight_reward = short_sight_return(steps_done, obs_after, obs_after, action)
+    long_sight_reward = normalized_net_return(steps_done, obs_before, obs_after, action)
+    short_sight_reward = short_sight_return(steps_done, obs_before, obs_after, action)
 
     return np.log(long_sight_reward + 1) + np.log(short_sight_reward + 1)
