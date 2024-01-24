@@ -1,0 +1,23 @@
+search_space:
+  learner_config$lr:
+    _type: loguniform
+    _value: [ 1e-8, 1e-7 ]
+  learner_config$reward_steps:
+    _type: quniform
+    _value: [ 1, 10, 1 ]
+  env$reward_fn:
+    _type: choice
+    _value: [ 'normalized_net_return', 'short_sight_return', 'long_short_sight_return', 'log_long_short_sight_return' ]
+
+
+trial_command: python run_training_nni.py
+trial_code_directory: ../
+
+trial_concurrency: 4
+max_trial_number: 100
+
+tuner:
+  name: Random
+
+training_service:
+  platform: local
