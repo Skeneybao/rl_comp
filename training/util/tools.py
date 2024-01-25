@@ -86,3 +86,10 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
                 break
 
     return total_cost / abs_vol
+
+
+def log1p_abs(x):
+    if x >= 0:
+        return np.log1p(x)
+    else:
+        return -np.log1p(-x)
