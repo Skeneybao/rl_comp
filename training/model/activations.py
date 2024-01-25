@@ -5,7 +5,7 @@ activations = {
     'sigmoid': nn.Sigmoid(),
     'tanh': nn.Tanh(),
     'softmax': nn.Softmax(),
-    'gelu': nn.GELU(),
+    'gelu': nn.GELU(approximate='tanh'),
     'leaky_relu': nn.LeakyReLU(),
     'elu': nn.ELU(),
 }

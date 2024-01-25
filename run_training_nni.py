@@ -35,6 +35,10 @@ def evaluate_model_process(
 if __name__ == '__main__':
     SAVING_PREFIX = '/mnt/data3/rl-data/training_res'
 
+    if os.path.exists('/mnt/data3/rl-data/training_res/STANDALONE/STANDALONE'):
+        # recursively remove
+        os.system('rm -rf /mnt/data3/rl-data/training_res/STANDALONE/STANDALONE')
+
     # Gen exp info & metadata
     #################################
     # init exp

@@ -53,7 +53,7 @@ class Action11OutputWrapper(ModelOutputWrapper):
     def action_id_to_action(self, action_id: int, obs: Dict) -> ActionType:
         # a4 -> a0 -> b0 -> b4 -> noop
         if 0 <= action_id < 5:
-            vol = self.vol * (action_id + 1)
+            vol = 5 - self.vol * action_id
             price = obs['ap4']
             action = (self.buy_side, vol, price)
 
