@@ -15,8 +15,8 @@ default_param = {
     'replay_buffer$capacity': 10000,
 
     ## model param
-    'model_type': 'dnn',
-    'model$hidden_dim': [64, 64],
+    'model_type': 'attn',
+    'model$hidden_dim': [32, 32],
 
     ## output wrapper param
     'output_wrapper_type': 'action11',

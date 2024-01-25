@@ -1,6 +1,7 @@
 import unittest
 
-from training.model.DNN import DNN, DNN_11_output
+from training.model.Attn import Attn
+from training.model.DNN import DNN
 from training.model_io.featureEngine import FeatureEngineDummy
 from training.model_io.output_wrapper import Action11OutputWrapper
 
@@ -63,11 +64,12 @@ class ModelOutputWrapperTest(unittest.TestCase):
                 else:
                     self.assertEqual(action[0], 2)
 
-    def test_dnn_11_inference(self):
+    def test_attn_inference(self):
         feature_engine = FeatureEngineDummy()
-        model = DNN_11_output(input_dim=feature_engine.get_input_shape(),
-                              hidden_dim=[32, 32, 32],
-                              output_dim=Action11OutputWrapper.get_output_shape())
+        model = Attn(input_dim=feature_engine.get_input_shape(),
+                     avg_price_dim=10,
+                     hidden_dim=[32, 32],
+                     output_dim=Action11OutputWrapper.get_output_shape())
         model_output_wrapper = Action11OutputWrapper(model)
         for i in range(100):
             action, model_input, model_output = model_output_wrapper.select_action(
