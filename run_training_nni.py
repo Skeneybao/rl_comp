@@ -4,7 +4,6 @@ import os
 from collections import deque
 
 import nni
-from line_profiler import profile
 
 from evaluator import EvaluatorConfig, evaluate_model
 from training.DQN.actor import Actor, cal_epsilon
@@ -33,8 +32,7 @@ def evaluate_model_process(
     result_queue.put((model_name, {**metrics, 'avg_loss': avg_loss, 'model_name': f'{model_name}.pt'}))
 
 
-# @profile
-def main():
+if __name__ == '__main__':
     SAVING_PREFIX = '/mnt/data3/rl-data/training_res'
 
     if os.path.exists('/mnt/data3/rl-data/training_res/STANDALONE/STANDALONE'):
@@ -130,9 +128,11 @@ def main():
     result_queue = multiprocessing.Queue()
     result_dict = {}
 
+
     def cleanup():
         for process in eval_processes:
             process.terminate()
+
 
     atexit.register(cleanup)
 
@@ -233,7 +233,3 @@ def main():
     else:
         raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')
     nni.report_final_result(best_metric)
-
-
-if __name__ == '__main__':
-    main()
