@@ -60,7 +60,7 @@ def evaluate_model(config: EvaluatorConfig):
     while env.reset_cnt <= len(env):
         state = feature_engine.get_feature(obs)
         action, _, _ = model_output_wrapper.select_action(obs, state)
-        valid_action, is_invalid = validate_action(obs, action)
+        valid_action, is_invalid = validate_action(obs, action, max_position=feature_engine.max_position)
         obs, _, _ = env.step(valid_action)
 
     logger.info(f'evaluating model {config.model_name} on {config.date} done.')

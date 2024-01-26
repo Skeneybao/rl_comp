@@ -3,7 +3,7 @@ from typing import List, Dict
 from training.model_io.output_wrapper import ActionType
 
 
-def validate_action(obs: Dict, action: ActionType) -> (ActionType, bool):
+def validate_action(obs: Dict, action: ActionType, max_position:int) -> (ActionType, bool):
     side, vol, price = action
 
     # Extract data from the state
@@ -17,9 +17,7 @@ def validate_action(obs: Dict, action: ActionType) -> (ActionType, bool):
                    obs['bv3'], obs['bv4']]
     code_net_position = obs['code_net_position']
 
-    # Constants
-    MAX_POSITION = 300
-    MIN_POSITION = -300
+    min_position = -max_position
 
     # Initialize variables
     is_invalid = False
@@ -32,8 +30,8 @@ def validate_action(obs: Dict, action: ActionType) -> (ActionType, bool):
     # Handle different sides
     if side == 0:  # Buy
         # Check for max position limit
-        if code_net_position + vol > MAX_POSITION:
-            vol = MAX_POSITION - code_net_position
+        if code_net_position + vol > max_position:
+            vol = max_position - code_net_position
             is_invalid = True
 
         # Adjust price and volume based on ask prices and volumes
@@ -54,8 +52,8 @@ def validate_action(obs: Dict, action: ActionType) -> (ActionType, bool):
 
     elif side == 2:  # Sell
         # Check for min position limit
-        if code_net_position - vol < MIN_POSITION:
-            vol = code_net_position - MIN_POSITION
+        if code_net_position - vol < min_position:
+            vol = code_net_position - min_position
             is_invalid = True
 
         # Adjust price and volume based on bid prices and volumes

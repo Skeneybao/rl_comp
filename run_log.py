@@ -122,7 +122,7 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
     all_observes = g.all_observes
     while not g.is_terminal():
         step = "step%d" % g.step_cnt
-        if g.step_cnt % 10 == 0:
+        if g.step_cnt % 10000 == 0:
             print(step)
 
         if render_mode and hasattr(g, "env_core"):
@@ -145,7 +145,7 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
             info_dict["info_after"] = info_after
         steps.append(info_dict)
 
-    game_info["steps"] = steps
+    #game_info["steps"] = steps
     game_info["winner"] = g.check_win()
     game_info["winner_information"] = g.won
     game_info["n_return"] = g.n_return

@@ -216,6 +216,7 @@ class KaFangStock(Game):
 
     def compute_final_stats(self):
         df = self.backtest_metric        #backtest_metric_data
+        df.to_csv('~/tmp.csv')
         stats = {}
         is_traded_day = df['day_total_orders_volume'] != 0
         days_traded = df.loc[is_traded_day, 'day_pnl'].count()

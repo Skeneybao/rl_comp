@@ -132,7 +132,15 @@ class TrainingStockEnv(Game):
         self._current_env = StockBaseEnvCython(date, code_list, mock_market_data)
 
         obs, done, info = self._current_env.reset()
+        info['signal0_rank'] = 0.5
+        info['signal1_rank'] = 0.5
+        info['signal2_rank'] = 0.5
+        info['signal0_mean'] = 0
+        info['signal1_mean'] = 0
+        info['signal2_mean'] = 0
+        info['mid_price_std'] = 1
         observation = {**obs, **info}
+        
         self._last_obs = observation
 
         logger.info(f'reset done, '
@@ -150,7 +158,7 @@ class TrainingStockEnv(Game):
                 code_metric_writer.writeheader()
 
         self._reset_cnt += 1
-        return observation, 0, info
+        return observation, 0, 0
 
     def step(self, action: ActionType):
         """
@@ -205,15 +213,16 @@ class TrainingStockEnv(Game):
                     daily_metric_writer.writerow(self._current_env.get_backtest_metric())
             self._deal_code_plot(obs['code'])
 
-            obs, _, info = self.reset()
-            self._step_cnt_except_this_episode = self._step_cnt
-            self._episode_cnt += 1
-
             self.info_acc = InfoAccumulator()
-
             self._code_pos_path = []
             self._code_price_path = []
             self._code_reward_accum_path = []
+
+            self._step_cnt_except_this_episode = self._step_cnt
+            self._episode_cnt += 1
+
+            obs, reward, _ = self.reset()
+            return obs, reward, done
 
         if len(self.info_acc.sig0_queue) > 240:
             info['signal0_rank'] = get_rank(self.info_acc.sig0_queue[-240:], obs['signal0']) / 240

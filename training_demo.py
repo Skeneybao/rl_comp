@@ -4,8 +4,8 @@ import os
 
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import LearnerConfig, DQNLearner
-from training.model_io.output_wrapper import Action11OutputWrapper
-from training.model_io.featureEngine import FeatureEngineVersion1
+from training.model_io.output_wrapper import Action11OutputWrapper, Action3OutputWrapper
+from training.model_io.featureEngine import FeatureEngineVersion3_Simple
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN
 from training.replay.ReplayBuffer import ReplayBuffer
@@ -21,9 +21,9 @@ if __name__ == '__main__':
     exp_name = f'{time.strftime("%Y%m%d:%H%M%S", time.localtime())}-{str(uuid.uuid4())[:8]}'
     os.makedirs(os.path.join(SAVING_PATH, exp_name))
 
-    feature_engine = FeatureEngineVersion1()
-    model = DNN(feature_engine.get_input_shape(), [64], Action11OutputWrapper.get_output_shape())
-    model_output_wrapper = Action11OutputWrapper(model)
+    feature_engine = FeatureEngineVersion3_Simple(max_position=10)
+    model = DNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64], output_dim=Action3OutputWrapper.get_output_shape())
+    model_output_wrapper = Action3OutputWrapper(model)
     replay_buffer = ReplayBuffer(10000)
 
     env = TrainingStockEnv(

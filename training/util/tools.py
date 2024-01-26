@@ -30,7 +30,7 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
     abs_vol = abs(vol_to_trade)
 
     if abs_vol > 10 or vol_to_trade == 0:
-        raise ValueError(f"Feature Error|avg_price_to_trade|{vol_to_trade}")
+        raise ValueError(f"avg_price_to_trade|{vol_to_trade}")
 
     ask_price_levels = [
         observation['ap0'],
@@ -62,6 +62,7 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
     ]
 
     total_cost = 0
+    margin_cost = 0
     if vol_to_trade > 0:
         if sum(ask_vol_levels) < 1e-5:
             return 0
@@ -71,21 +72,29 @@ def get_price_avg(observation: Dict, vol_to_trade: float):
                 total_cost += av * ap
             else:
                 total_cost += vol_to_trade * ap
+                margin_cost = ap
                 break
+        else:
+            raise ValueError(f"Invalid vol_to_trade|{observation}|{vol_to_trade}")
+        
 
     elif vol_to_trade < 0:
         vol_to_trade = -vol_to_trade
         if sum(bid_vol_levels) < 1e-5:
             return 0
+        
         for bp, bv in zip(bid_price_levels, bid_vol_levels):
             if vol_to_trade > bv:
                 vol_to_trade -= bv
                 total_cost += bv * bp
             else:
                 total_cost += vol_to_trade * bp
+                margin_cost = bp
                 break
-
-    return total_cost / abs_vol
+        else:
+            raise ValueError(f"Invalid vol_to_trade|{observation}|{vol_to_trade}")
+        
+    return total_cost / abs_vol, margin_cost
 
 
 def log1p_abs(x):
