@@ -7,6 +7,8 @@ from training.model.DNN import *
 def get_model(name: str) -> Type[nn.Module]:
     if name == 'dnn':
         return DNN
+    elif name == 'dnn_11_output':
+        return DNN_11_output
     elif name == 'attn':
         return Attn
     else:
