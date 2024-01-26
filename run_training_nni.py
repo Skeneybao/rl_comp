@@ -229,7 +229,7 @@ if __name__ == '__main__':
         best_metric = sorted(result_dict.values(), key=lambda x: x['default'])[-2]
     elif FINAL_METRIC_STRATEGY == 'rolling_second_best':
         latest_consider_num = max(100, int(len(result_dict) * 0.1))
-        best_metric = sorted(result_dict.values()[-latest_consider_num:], key=lambda x: x['default'])[-2]
+        best_metric = sorted(list(result_dict.values())[-latest_consider_num:], key=lambda x: x['default'])[-2]
     else:
         raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')
     nni.report_final_result(best_metric)
