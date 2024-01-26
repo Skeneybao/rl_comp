@@ -3,7 +3,7 @@ import unittest
 from training.model.Attn import Attn
 from training.model.DNN import DNN
 from training.model_io.featureEngine import FeatureEngineDummy
-from training.model_io.output_wrapper import Action11OutputWrapper
+from training.model_io.output_wrapper import Action11OutputWrapper, Action3OutputWrapper
 
 
 class ModelOutputWrapperTest(unittest.TestCase):
@@ -42,11 +42,33 @@ class ModelOutputWrapperTest(unittest.TestCase):
            'day_pnl': 0.0,
            'day_handling_fee': 0.0}
 
-    def test_inference(self):
+    def test_dnn_inference(self):
         feature_engine = FeatureEngineDummy()
         model = DNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64],
                     output_dim=Action11OutputWrapper.get_output_shape())
         model_output_wrapper = Action11OutputWrapper(model)
+        for i in range(100):
+            action, model_input, model_output = model_output_wrapper.select_action(
+                self.obs, feature_engine.get_feature(self.obs))
+            self.assertEqual(len(action), 3)
+            self.assertIn(action[0], [0, 1, 2])
+            action_id = model_output.argmax(-1).item()
+            price_key = ['ap4', 'ap3', 'ap2', 'ap1', 'ap0', 'bp0', 'bp1', 'bp2', 'bp3', 'bp4', 'noop'][action_id]
+            if price_key == 'noop':
+                self.assertEqual(action[0], 1)
+                self.assertEqual(action[1], 0)
+                self.assertEqual(action[2], 0)
+            else:
+                if price_key.startswith('a'):
+                    self.assertEqual(action[0], 0)
+                else:
+                    self.assertEqual(action[0], 2)
+
+    def test_output3_inference(self):
+        feature_engine = FeatureEngineDummy()
+        model = DNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64],
+                    output_dim=Action3OutputWrapper.get_output_shape())
+        model_output_wrapper = Action3OutputWrapper(model)
         for i in range(100):
             action, model_input, model_output = model_output_wrapper.select_action(
                 self.obs, feature_engine.get_feature(self.obs))
