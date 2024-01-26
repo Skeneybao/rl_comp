@@ -16,7 +16,7 @@ default_param = {
     'replay_buffer$capacity': 10000,
 
     ## model param
-    'model_type': 'dnn_11_output',
+    'model_type': 'dnn',
     'model$hidden_dim': [32, 32],
 
     ## output wrapper param
