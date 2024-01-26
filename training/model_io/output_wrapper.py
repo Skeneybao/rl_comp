@@ -121,7 +121,7 @@ class Action3OutputWrapper(ModelOutputWrapper):
 
         if observation['eventTime'] > 145500000:
             return (self.noop_side, 0., 0.), None, None
-        
+
         # 0. inference
         with torch.no_grad():
             model_output = self.model(model_input.to(self.device))
@@ -135,7 +135,7 @@ class Action3OutputWrapper(ModelOutputWrapper):
         return action, model_input, model_output
 
     def random_action(self, observation, model_input) -> Tuple[ActionType, torch.tensor, torch.tensor]:
-        
+
         if observation['eventTime'] > 145500000:
             return (self.noop_side, 0., 0.), None, None
         action_id = random.randrange(0, 3)
@@ -148,7 +148,7 @@ class Action3OutputWrapper(ModelOutputWrapper):
 def get_output_wrapper(name: str) -> Type[ModelOutputWrapper]:
     if name == 'action11':
         return Action11OutputWrapper
-    if name == 'action3':
+    elif name == 'action3':
         return Action3OutputWrapper
     else:
         raise ValueError(f'unknown output wrapper {name}')
