@@ -71,7 +71,7 @@ class Actor:
         else:
             action, _, model_output = self.output_wrapper.select_action(self.this_obs, self.this_state)
 
-        valid_action, is_invalid = validate_action(self.this_obs, action)
+        valid_action, is_invalid = validate_action(self.this_obs, action, max_position=self.feature_engine.max_position)
         next_obs, reward, done = self.env.step(valid_action)
         next_state = self.feature_engine.get_feature(next_obs)
         if not self.this_obs['eventTime'] > 145500000:
