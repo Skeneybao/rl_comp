@@ -71,7 +71,7 @@ class Action11OutputWrapper(ModelOutputWrapper):
 
         if observation['eventTime'] > 145500000:
             return (self.noop_side, 0., 0.), None, None
-
+        
         # 0. inference
         with torch.no_grad():
             model_output = self.model(model_input.to(self.device))
@@ -85,7 +85,7 @@ class Action11OutputWrapper(ModelOutputWrapper):
         return action, model_input, model_output
 
     def random_action(self, observation, model_input) -> Tuple[ActionType, torch.tensor, torch.tensor]:
-
+        
         if observation['eventTime'] > 145500000:
             return (self.noop_side, 0., 0.), None, None
         action_id = random.randrange(0, 11)
@@ -108,16 +108,11 @@ class Action3OutputWrapper(ModelOutputWrapper):
     def action_id_to_action(self, action_id: int, obs: Dict) -> ActionType:
         # a4 -> a0 -> b0 -> b4 -> noop
         if action_id == 0:
-            vol = self.vol
-            price = obs['ap4']
-            action = (self.buy_side, vol, price)
-
-        elif 5 <= action_id < 10:
-            vol = - self.vol
-            price = obs['bp4']
-            action = (self.sell_side, vol, price)
-        elif action_id == 10:
+            action = (self.buy_side, self.vol, obs['ap0'])
+        elif action_id == 1:
             action = (self.noop_side, 0., 0.)
+        elif action_id == 2:
+            action = (self.sell_side, self.vol, obs['bp0'])
         else:
             raise ValueError(f'model output should between [0, {self.get_output_shape()})')
         return action
