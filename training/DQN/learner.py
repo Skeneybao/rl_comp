@@ -27,6 +27,9 @@ class LearnerConfig:
 
     reward_steps: int = 5
 
+    def __post_init__(self):
+        self.lr = float(self.lr)
+
 
 class Learner(abc.ABC):
     @abc.abstractmethod
