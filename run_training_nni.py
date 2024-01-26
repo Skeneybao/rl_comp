@@ -19,7 +19,7 @@ multiprocessing.set_start_method('spawn', force=True)
 DEFAULT_METRIC_KEY = 'daily_pnl_mean_sharped'
 
 # second_best or best
-FINAL_METRIC_STRATEGY = 'second_best'
+FINAL_METRIC_STRATEGY = 'rolling_second_best'
 
 
 def evaluate_model_process(
@@ -34,6 +34,10 @@ def evaluate_model_process(
 
 if __name__ == '__main__':
     SAVING_PREFIX = '/mnt/data3/rl-data/training_res'
+
+    if os.path.exists('/mnt/data3/rl-data/training_res/STANDALONE/STANDALONE'):
+        # recursively remove
+        os.system('rm -rf /mnt/data3/rl-data/training_res/STANDALONE/STANDALONE')
 
     # Gen exp info & metadata
     #################################
@@ -223,6 +227,9 @@ if __name__ == '__main__':
         best_metric = max(result_dict.values(), key=lambda x: x['default'])
     elif FINAL_METRIC_STRATEGY == 'second_best':
         best_metric = sorted(result_dict.values(), key=lambda x: x['default'])[-2]
+    elif FINAL_METRIC_STRATEGY == 'rolling_second_best':
+        latest_consider_num = max(100, int(len(result_dict) * 0.1))
+        best_metric = sorted(result_dict.values()[-latest_consider_num:], key=lambda x: x['default'])[-2]
     else:
         raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')
     nni.report_final_result(best_metric)

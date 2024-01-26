@@ -4,7 +4,7 @@ import numpy as np
 
 from training.model_io.output_wrapper import ActionType
 from training.reward.get_reward import register_reward
-from training.util.tools import get_price_avg
+from training.util.tools import get_price_avg, log1p_abs
 
 
 @register_reward('normalized_net_return')
@@ -83,4 +83,4 @@ def log_long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Di
     long_sight_reward = normalized_net_return(steps_done, obs_before, obs_after, action)
     short_sight_reward = short_sight_return(steps_done, obs_before, obs_after, action)
 
-    return np.log(long_sight_reward + 1) + np.log(short_sight_reward + 1)
+    return log1p_abs(long_sight_reward) + log1p_abs(short_sight_reward)
