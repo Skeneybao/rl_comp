@@ -8,8 +8,10 @@ from typing import Callable, Dict
 
 import math
 import matplotlib.pyplot as plt
+import numba
 import numpy as np
 import pandas as pd
+from line_profiler import profile
 
 from training.model_io.output_wrapper import ActionType
 from training.util.logger import logger
@@ -24,7 +26,7 @@ from env.stock_raw.mock_market_common.mock_market_data_cython import MockMarketD
 from env.stock_raw.envs.stock_base_env_cython import StockBaseEnvCython
 from env.stock_raw.utils import Order
 from training.reward.dummy_reward import cal_reward as dummy_reward
-from training.util.tools import get_rank
+from training.util.tools import get_rank, mean, std
 
 TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
 TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
@@ -32,22 +34,32 @@ TRAIN_DATA_PATH = TRAINING_DATA_5SEC
 CODE_TO_PLOT = [486.0, 218.0, 143.0, 492.0]
 
 
+def init_flost_typed_list():
+    l = numba.typed.List()
+    l.append(0.0)
+    l.pop()
+    return l
+
+
 @dataclass
 class InfoAccumulator:
-    sig0_queue: list = field(default_factory=list)
-    sig1_queue: list = field(default_factory=list)
-    sig2_queue: list = field(default_factory=list)
-    mid_price_queue: list = field(default_factory=list)
+    sig0_queue: numba.types.ListType(numba.types.float64) = field(default_factory=init_flost_typed_list)
+    sig1_queue: numba.types.ListType(numba.types.float64) = field(default_factory=init_flost_typed_list)
+    sig2_queue: numba.types.ListType(numba.types.float64) = field(default_factory=init_flost_typed_list)
+    mid_price_queue: numba.types.ListType(numba.types.float64) = field(default_factory=init_flost_typed_list)
     code_reward_accum: float = 0
     daily_reward_accum: float = 0
 
-    def log(self, mid_price, sig0, sig1, sig2, reward):
-        self.sig0_queue.append(sig0)
-        self.sig1_queue.append(sig1)
-        self.sig2_queue.append(sig2)
-        self.mid_price_queue.append(mid_price)
-        self.code_reward_accum += reward
-        self.daily_reward_accum += reward
+
+@numba.jit(nopython=True, nogil=True)
+def log(sig0_queue, sig1_queue, sig2_queue, mid_price_queue, code_reward_accum, daily_reward_accum,
+        mid_price, sig0, sig1, sig2, reward):
+    sig0_queue.append(sig0)
+    sig1_queue.append(sig1)
+    sig2_queue.append(sig2)
+    mid_price_queue.append(mid_price)
+    code_reward_accum += reward
+    daily_reward_accum += reward
 
 
 class TrainingStockEnv(Game):
@@ -152,6 +164,7 @@ class TrainingStockEnv(Game):
         self._reset_cnt += 1
         return observation, 0, info
 
+    # @profile
     def step(self, action: ActionType):
         """
         Action format:
@@ -179,7 +192,8 @@ class TrainingStockEnv(Game):
             action,
         )
         # Record all signal values for current code
-        self.info_acc.log((obs['ap0'] + obs['bp0']) / 2, obs['signal0'], obs['signal1'], obs['signal2'], reward)
+        # self.info_acc.log((obs['ap0'] + obs['bp0']) / 2, obs['signal0'], obs['signal1'], obs['signal2'], reward)
+        log(self.info_acc.sig0_queue, self.info_acc.sig1_queue, self.info_acc.sig2_queue, self.info_acc.mid_price_queue, self.info_acc.code_reward_accum, self.info_acc.daily_reward_accum, (obs['ap0'] + obs['bp0']) / 2 / obs['ap0_t0'], obs['signal0'], obs['signal1'], obs['signal2'], reward)
 
         if obs['code'] in self.codes_to_log:
             self._code_pos_path.append(obs['code_net_position'])
@@ -216,13 +230,13 @@ class TrainingStockEnv(Game):
             self._code_reward_accum_path = []
 
         if len(self.info_acc.sig0_queue) > 240:
-            info['signal0_rank'] = get_rank(self.info_acc.sig0_queue[-240:], obs['signal0']) / 240
-            info['signal1_rank'] = get_rank(self.info_acc.sig1_queue[-240:], obs['signal1']) / 240
-            info['signal2_rank'] = get_rank(self.info_acc.sig2_queue[-240:], obs['signal2']) / 240
-            info['signal0_mean'] = sum(self.info_acc.sig0_queue) / len(self.info_acc.sig0_queue)
-            info['signal1_mean'] = sum(self.info_acc.sig1_queue) / len(self.info_acc.sig1_queue)
-            info['signal2_mean'] = sum(self.info_acc.sig2_queue) / len(self.info_acc.sig2_queue)
-            info['mid_price_std'] = np.std(np.array(self.info_acc.mid_price_queue[-240:]) / obs['ap0_t0'])
+            info['signal0_rank'] = get_rank(self.info_acc.sig0_queue, len(self.info_acc.sig0_queue) - 240, len(self.info_acc.sig0_queue), obs['signal0']) / 240
+            info['signal1_rank'] = get_rank(self.info_acc.sig1_queue, len(self.info_acc.sig1_queue) - 240, len(self.info_acc.sig2_queue), obs['signal1']) / 240
+            info['signal2_rank'] = get_rank(self.info_acc.sig2_queue, len(self.info_acc.sig1_queue) - 240, len(self.info_acc.sig2_queue), obs['signal2']) / 240
+            info['signal0_mean'] = mean(self.info_acc.sig0_queue)
+            info['signal1_mean'] = mean(self.info_acc.sig1_queue)
+            info['signal2_mean'] = mean(self.info_acc.sig2_queue)
+            info['mid_price_std'] = std(self.info_acc.mid_price_queue, len(self.info_acc.mid_price_queue) - 240, len(self.info_acc.mid_price_queue)) / obs['ap0_t0']
         else:
             info['signal0_rank'] = 0.5
             info['signal1_rank'] = 0.5

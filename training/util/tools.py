@@ -1,23 +1,37 @@
-from typing import Dict, List
+from typing import Dict
 
+import numba
 import numpy as np
 
 
-def get_rank(data: List, target):
+@numba.jit(nopython=True, fastmath=True, nogil=True)
+def get_rank(data: numba.typed.List[numba.float64], start: int, end: int, target: float) -> numba.float64:
     rank = 0
-    for val in data:
-        if val < target:
+    for i in range(start, end):
+        if data[i] < target:
             rank += 1
-
     return rank
 
 
-def std(data):
+@numba.jit(nopython=True, fastmath=True, nogil=True)
+def mean(data: numba.typed.List[numba.float64]) -> numba.float64:
+    if len(data) == 0:
+        return 0
+    return sum(data) / len(data)
+
+
+@numba.jit(nopython=True, fastmath=True, nogil=True)
+def std(data: numba.typed.List[numba.float64], start: int, end: int) -> numba.float64:
+    data = data[start:end]
     if len(data) < 2:
         raise ValueError("Standard deviation requires at least two data points")
 
     mean = sum(data) / len(data)
-    variance = sum((x - mean) ** 2 for x in data) / (len(data) - 1)
+    # Compute variance in a loop
+    variance = 0.0
+    for x in data:
+        variance += (x - mean) ** 2
+    variance /= (len(data) - 1)
     return variance ** 0.5
 
 
