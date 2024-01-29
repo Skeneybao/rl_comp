@@ -61,6 +61,7 @@ class TrainingStockEnv(Game):
             reward_fn: Callable[[int, Dict, Dict, ActionType], float] = dummy_reward,
             data_path=TRAIN_DATA_PATH,
             dates='ALL',
+            max_postion=300,
     ):
 
         super(TrainingStockEnv, self).__init__(
@@ -102,6 +103,7 @@ class TrainingStockEnv(Game):
             self._dateIter = OrderedIterator(dateList)
 
         self.codes_to_log = CODE_TO_PLOT
+        self._max_position = max_postion
         self._code_pos_path = []
         self._code_price_path = []
         self._code_reward_accum_path = []
@@ -139,6 +141,7 @@ class TrainingStockEnv(Game):
         info['signal1_mean'] = 0
         info['signal2_mean'] = 0
         info['mid_price_std'] = 1
+        info['warming-up'] = True
         observation = {**obs, **info}
         
         self._last_obs = observation
@@ -232,6 +235,7 @@ class TrainingStockEnv(Game):
             info['signal1_mean'] = sum(self.info_acc.sig1_queue) / len(self.info_acc.sig1_queue)
             info['signal2_mean'] = sum(self.info_acc.sig2_queue) / len(self.info_acc.sig2_queue)
             info['mid_price_std'] = np.std(np.array(self.info_acc.mid_price_queue[-240:]) / obs['ap0_t0'])
+            info['warming-up'] = False
         else:
             info['signal0_rank'] = 0.5
             info['signal1_rank'] = 0.5
@@ -240,6 +244,7 @@ class TrainingStockEnv(Game):
             info['signal1_mean'] = 0
             info['signal2_mean'] = 0
             info['mid_price_std'] = 1
+            info['warming-up'] = True
 
         observation = {**obs, **info}
         self._last_obs = observation
@@ -287,7 +292,7 @@ class TrainingStockEnv(Game):
     def _deal_code_plot(self, code):
         if code in self.codes_to_log:
             fig, ax = plt.subplots()
-            ax.plot(np.array(self._code_pos_path) / 300, label='net_position')
+            ax.plot(np.array(self._code_pos_path) / self._max_position, label='net_position')
             ax.plot((np.array(self._code_price_path) - 1) * 10, label='price')
             ax.set_ylim(-1.0, 1.0)
             ax2 = ax.twinx()

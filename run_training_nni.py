@@ -82,7 +82,8 @@ if __name__ == '__main__':
         mode=env_param.mode,
         reward_fn=env_param.reward_fn,
         save_metric_path=saving_path,
-        save_code_metric=True)
+        save_code_metric=True,
+        max_postion=feature_engine.max_position)
 
     # actor
     actor = Actor(
@@ -164,6 +165,7 @@ if __name__ == '__main__':
                         model_type=model_type,
                         model_param=model_param,
                         output_wrapper_type=output_wrapper_type,
+                        reward_fn=env_param.reward_fn,
                     )
                     eval_process = multiprocessing.Process(
                         target=evaluate_model_process,

@@ -194,7 +194,7 @@ class FeatureEngineVersion3(FeatureEngineVersion2):
         rule_decision = 0.0
         if (observation['signal0'] > 0.8) and price_predict_signal0 >= observation['ap0']:
             rule_decision = 1.0
-        elif (observation['signal0'] < 0.8) and price_predict_signal0 <= observation['ap0']:
+        elif (observation['signal0'] < -0.8) and price_predict_signal0 <= observation['bp0']:
             rule_decision = -1.0
 
         return rule_decision
@@ -208,7 +208,7 @@ class FeatureEngineVersion3(FeatureEngineVersion2):
 class FeatureEngineVersion3_Simple(FeatureEngineVersion3):
 
     def get_input_shape(self):
-        return 17
+        return 16
 
     def get_feature(self, observation) -> torch.Tensor:
 
@@ -231,7 +231,6 @@ class FeatureEngineVersion3_Simple(FeatureEngineVersion3):
             observation['signal2_mean'],
             observation['mid_price_std'],
             (observation['ap0'] / mid_price - 1) * 10000,
-            (observation['bp0'] / mid_price - 1) * 10000,
         ],
             dtype=torch.float32,
         )
@@ -241,7 +240,7 @@ class FeatureEngineVersion3_Simple(FeatureEngineVersion3):
     @property
     def feature_names(self):
         return ['time', 'logPrice', 'midPrice', 'rule_des', 'pos', 'sig0', 'sig1', 'sig2', 'sig0_rank', 'sig1_rank', 'sig2_rank',
-                'sig0_avg', 'sig1_avg', 'sig2_avg', 'priceStd', 'ap0', 'bp0'] 
+                'sig0_avg', 'sig1_avg', 'sig2_avg', 'priceStd', 'spread', ] 
 
 FeatureEngineDummy = FeatureEngineVersion1
 
