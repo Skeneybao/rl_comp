@@ -7,6 +7,7 @@ from typing import Callable
 import math
 import torch
 from torch import nn
+import numpy as np
 
 from training.model_io.output_wrapper import ModelOutputWrapper
 from training.model_io.featureEngine import FeatureEngine
@@ -56,7 +57,7 @@ class Actor:
     ):
         self.env = env
         self.feature_engine = feature_engine
-        self.this_obs, _, _ = self.env.reset()
+        self.this_obs, self.last_reward, _ = self.env.reset()
         self.this_state = self.feature_engine.get_feature(self.this_obs) 
         self.output_wrapper = output_wrapper
         self.replay_buffer = replay_buffer
@@ -65,18 +66,22 @@ class Actor:
     def step(self):
 
         self.log_states()
+        if not self.this_obs['warming-up']:
+            if if_epsilon_greedy(self.config, self.env.step_cnt):
+                action, _, model_output = self.output_wrapper.random_action(self.this_obs, self.this_state)
+            else:
+                action, _, model_output = self.output_wrapper.select_action(self.this_obs, self.this_state)
 
-        if if_epsilon_greedy(self.config, self.env.step_cnt):
-            action, _, model_output = self.output_wrapper.random_action(self.this_obs, self.this_state)
+            valid_action, is_invalid = validate_action(self.this_obs, action, max_position=self.feature_engine.max_position)
+            next_obs, reward, done = self.env.step(valid_action)
+            next_state = self.feature_engine.get_feature(next_obs)
+            if not self.this_obs['eventTime'] > 145500000:
+                self.replay_buffer.push([self.this_state, model_output, reward, next_state, done])
         else:
-            action, _, model_output = self.output_wrapper.select_action(self.this_obs, self.this_state)
-
-        valid_action, is_invalid = validate_action(self.this_obs, action, max_position=self.feature_engine.max_position)
-        next_obs, reward, done = self.env.step(valid_action)
-        next_state = self.feature_engine.get_feature(next_obs)
-        if not self.this_obs['eventTime'] > 145500000:
-            self.replay_buffer.push([self.this_state, model_output, reward, next_state, done])
+            next_obs, reward, done = self.env.step((1, 0, 0))
+            next_state = self.feature_engine.get_feature(next_obs)
         
+        self.last_reward = reward
         self.this_obs = next_obs
         self.this_state = next_state
 
@@ -86,7 +91,7 @@ class Actor:
             output_file_path = os.path.join(self.env.save_metric_path, 'code_metric',f"{self.env.date}_{current_code}_states.csv")
             file_exists = os.path.exists(output_file_path)
             with open(output_file_path, 'a', newline='') as csvfile:
-                csv_writer = csv.DictWriter(csvfile, fieldnames=self.feature_engine.feature_names)
+                csv_writer = csv.DictWriter(csvfile, fieldnames=self.feature_engine.feature_names + ['reward'])
                 if not file_exists:
                     csv_writer.writeheader()
-                csv_writer.writerow(dict(zip(self.feature_engine.feature_names, self.this_state.numpy())))
+                csv_writer.writerow(dict(zip(self.feature_engine.feature_names + ['reward'], np.append(self.this_state.numpy(), self.last_reward))))
