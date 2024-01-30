@@ -101,4 +101,5 @@ if __name__ == '__main__':
         reward_fn=normalized_net_return,
     )
 
-    evaluate_model(config)
+    res = evaluate_model(config)
+    print(res)
