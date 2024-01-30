@@ -50,8 +50,8 @@ def evaluate_model(config: EvaluatorConfig):
         save_daily_metric=True,
         save_code_metric=True,
         reward_fn=config.reward_fn,
-        max_postion=feature_engine.max_position,    
-        )
+        max_postion=feature_engine.max_position,
+    )
 
     model = config.model_type(
         input_dim=feature_engine.get_input_shape(),
@@ -63,6 +63,8 @@ def evaluate_model(config: EvaluatorConfig):
 
     obs, reward, _ = env.reset()
 
+    rewards = [reward]
+
     while env.reset_cnt <= len(env):
         state = feature_engine.get_feature(obs)
         log_states(env, obs, feature_engine, state, reward)
@@ -72,26 +74,26 @@ def evaluate_model(config: EvaluatorConfig):
             action, _, _ = model_output_wrapper.select_action(obs, state)
             valid_action, is_invalid = validate_action(obs, action, max_position=feature_engine.max_position)
         obs, reward, _ = env.step(valid_action)
+        rewards.append(reward)
 
     logger.info(f'evaluating model {config.model_name} on {config.date} done.')
 
-    return env.compute_final_stats()
+    return {**env.compute_final_stats(), 'avg_reward': np.mean(rewards)}
 
 
 def log_states(env, obs, feature_engine, state, reward):
-
     current_code = obs['code']
     if env.save_code_metric and current_code in env.codes_to_log:
-        output_file_path = os.path.join(env.save_metric_path, 'code_metric',f"{env.date}_{current_code}_states.csv")
+        output_file_path = os.path.join(env.save_metric_path, 'code_metric', f"{env.date}_{current_code}_states.csv")
         file_exists = os.path.exists(output_file_path)
         with open(output_file_path, 'a', newline='') as csvfile:
             csv_writer = csv.DictWriter(csvfile, fieldnames=feature_engine.feature_names + ['reward'])
             if not file_exists:
                 csv_writer.writeheader()
             csv_writer.writerow(dict(zip(feature_engine.feature_names + ['reward'], np.append(state.numpy(), reward))))
-        
+
+
 if __name__ == '__main__':
-    
     config = EvaluatorConfig(
         data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
         date='ALL',
