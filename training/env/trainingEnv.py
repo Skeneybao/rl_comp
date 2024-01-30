@@ -221,7 +221,6 @@ class TrainingStockEnv(Game):
             self._code_price_path = []
             self._code_reward_accum_path = []
 
-            self._step_cnt_except_this_episode = self._step_cnt
             self._episode_cnt += 1
 
             obs, reward, _ = self.reset()
