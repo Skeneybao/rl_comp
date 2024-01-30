@@ -13,10 +13,10 @@ default_param = {
     # 'feature_engine$sample_param': '1'
 
     ## replay buffer
-    'replay_buffer$capacity': 10000,
+    'replay_buffer$capacity': 100000,
 
     ## model param
-    'model_type': 'dnn_11_output',
+    'model_type': 'dnn',
     'model$hidden_dim': [32, 32],
 
     ## output wrapper param

@@ -26,6 +26,10 @@ class LearnerConfig:
     minimal_buffer_size: int = 1000
 
     reward_steps: int = 5
+    grad_max_norm: float = 1.
+
+    def __post_init__(self):
+        self.lr = float(self.lr)
 
 
 class Learner(abc.ABC):
@@ -129,7 +133,7 @@ class DQNLearner(Learner):
         self.optimizer.zero_grad()
         loss.backward()
         # grad clipping
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 100)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_max_norm)
         self.optimizer.step()
 
         self.step_cnt += 1
@@ -202,7 +206,7 @@ class DQNLearner(Learner):
         self.optimizer.zero_grad()
         loss.backward()
         # grad clipping
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 100)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_max_norm)
         self.optimizer.step()
 
         self.step_cnt += 1
