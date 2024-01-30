@@ -1,0 +1,24 @@
+search_space:
+  learner_config$lr:
+    _type: loguniform
+    _value: [ 1e-8, 1e-7 ]
+  env$reward_fn:
+    _type: choice
+    _value: [ 'normalized_net_return', 'scaled_net_return' ]
+  signal_risk_thres:
+    _type: uniform
+    _value: [ -10, 0 ]
+
+
+
+trial_command: python run_training_nni.py
+trial_code_directory: ../
+
+trial_concurrency: 3
+max_trial_number: 100
+
+tuner:
+  name: Random
+
+training_service:
+  platform: local
