@@ -1,6 +1,6 @@
 search_space:
   learner_config$lr:
-    _type: choice
+    _type: loguniform
     _value: [ 1e-8, 1e-7 ]
   env$reward_fn:
     _type: choice
