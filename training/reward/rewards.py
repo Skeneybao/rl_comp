@@ -49,15 +49,20 @@ def normalized_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, ac
 @register_reward('scaled_net_return')
 def scaled_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, scale=35e-4):
     
+    side, vol, price = action
+
     add_on_handling_fee = (obs_after['day_handling_fee'] - obs_before['day_handling_fee']) / obs_after['ap0_t0'] / 10
     before_mid_price = (obs_before['ap0'] + obs_before['bp0']) / 2
     after_mid_price = (obs_after['ap0'] + obs_after['bp0']) / 2
     net_pos = obs_after['code_net_position']
+    
+    # assume only take level1
+    take_fee = abs(vol) * (obs_before['ap0'] - obs_before['bp0']) / 2 / obs_before['ap0_t0']
 
     interval_return = (after_mid_price - before_mid_price) / obs_after['ap0_t0']
     scaled_return = np.arctan(interval_return / scale) * scale
     
-    return net_pos * scaled_return - add_on_handling_fee
+    return net_pos * scaled_return - add_on_handling_fee - take_fee
 
 
 

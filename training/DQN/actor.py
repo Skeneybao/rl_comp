@@ -14,7 +14,7 @@ from training.model_io.featureEngine import FeatureEngine
 from training.env.trainingEnv import TrainingStockEnv
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.validate_action import validate_action
-
+from training.util.explicit_control import ExplicitControlConf
 
 @dataclass
 class ActorConfig:
@@ -54,6 +54,7 @@ class Actor:
             output_wrapper: ModelOutputWrapper,
             replay_buffer: ReplayBuffer,
             config: ActorConfig,
+            explicit_config: ExplicitControlConf,
     ):
         self.env = env
         self.feature_engine = feature_engine
@@ -62,6 +63,7 @@ class Actor:
         self.output_wrapper = output_wrapper
         self.replay_buffer = replay_buffer
         self.config = config
+        self.explicit_config = explicit_config
 
     def step(self):
 
@@ -72,7 +74,7 @@ class Actor:
             else:
                 action, _, model_output = self.output_wrapper.select_action(self.this_obs, self.this_state)
 
-            valid_action, is_invalid = validate_action(self.this_obs, action, max_position=self.feature_engine.max_position)
+            valid_action, is_invalid = validate_action(self.this_obs, action, max_position=self.feature_engine.max_position, signal_risk_thresh=self.explicit_config.signal_risk_thresh)
             next_obs, reward, done = self.env.step(valid_action)
             next_state = self.feature_engine.get_feature(next_obs)
             if not self.this_obs['eventTime'] > 145500000:

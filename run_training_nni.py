@@ -68,6 +68,7 @@ if __name__ == '__main__':
      replay_buffer_param,
      actor_config,
      learner_config,
+     explicit_config,
      ) = get_param_from_nni()
 
     # init
@@ -92,6 +93,7 @@ if __name__ == '__main__':
         model_output_wrapper,
         replay_buffer,
         actor_config,
+        explicit_config,
     )
 
     # learner
@@ -166,6 +168,7 @@ if __name__ == '__main__':
                         model_param=model_param,
                         output_wrapper_type=output_wrapper_type,
                         reward_fn=env_param.reward_fn,
+                        explicit_config=explicit_config,
                     )
                     eval_process = multiprocessing.Process(
                         target=evaluate_model_process,

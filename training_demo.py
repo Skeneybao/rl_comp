@@ -11,6 +11,7 @@ from training.model.DNN import DNN
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.reward.rewards import scaled_net_return
 from training.util.logger import logger
+from training.util.explicit_control import ExplicitControlConf
 
 
 if __name__ == '__main__':
@@ -26,6 +27,10 @@ if __name__ == '__main__':
     model_output_wrapper = Action3OutputWrapper(model)
     replay_buffer = ReplayBuffer(10000)
 
+    explicit_config = ExplicitControlConf(
+        signal_risk_thresh = -float('inf')
+    )
+    
     env = TrainingStockEnv(
         mode='ordered',
         reward_fn=scaled_net_return,
@@ -44,6 +49,7 @@ if __name__ == '__main__':
         model_output_wrapper,
         replay_buffer,
         actor_config,
+        explicit_config,
     )
 
     learner_config = LearnerConfig(

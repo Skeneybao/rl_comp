@@ -107,6 +107,7 @@ class TrainingStockEnv(Game):
         self._code_pos_path = []
         self._code_price_path = []
         self._code_reward_accum_path = []
+        self._net_pnl_accum_path = []
         self.info_acc = InfoAccumulator()
         self._current_env = None
         self._step_cnt = 0
@@ -128,6 +129,9 @@ class TrainingStockEnv(Game):
         self._parquetFile.load()
 
         data_df = self._parquetFile.data
+        data_df['rand'] =  data_df['code'] % np.random.randn()
+        data_df = data_df.sort_values(by=['rand', 'eventTime'])
+        del data_df['rand']
         code_list = [float(item) for item in data_df['code'].unique()]
 
         mock_market_data = MockMarketDataCython(np.array(data_df))
@@ -196,7 +200,7 @@ class TrainingStockEnv(Game):
             self._code_pos_path.append(obs['code_net_position'])
             self._code_reward_accum_path.append(self.info_acc.code_reward_accum)
             self._code_price_path.append((obs['ap0'] + obs['bp0']) / 2 / obs['ap0_t0'])
-
+            self._net_pnl_accum_path.append(obs['code_pnl'] / obs['ap0_t0'])
         # Handling when done:
         # 0: not done, 1: done in this file, 2: done for this code of stock
         # when done, drop the last observation, and reset the current env, finally return the next observation
@@ -220,7 +224,7 @@ class TrainingStockEnv(Game):
             self._code_pos_path = []
             self._code_price_path = []
             self._code_reward_accum_path = []
-
+            self._net_pnl_accum_path = []
             self._step_cnt_except_this_episode = self._step_cnt
             self._episode_cnt += 1
 
@@ -285,6 +289,7 @@ class TrainingStockEnv(Game):
         self._code_pos_path = []
         self._code_price_path = []
         self._code_reward_accum_path = []
+        self._net_pnl_accum_path = []
         self.info_acc = InfoAccumulator(daily_reward_accum=self.info_acc.daily_reward_accum)
 
         return obs, None, info
@@ -297,6 +302,7 @@ class TrainingStockEnv(Game):
             ax.set_ylim(-1.0, 1.0)
             ax2 = ax.twinx()
             ax2.plot(self._code_reward_accum_path, label='reward_accum', color='plum')
+            ax2.plot(self._net_pnl_accum_path, label='pnl_accum', color='salmon')
             fig.legend(loc='upper left')
             fig.savefig(os.path.join(self.save_metric_path, 'code_metric', f"{self._current_env.date}_{int(code)}.png"))
 
