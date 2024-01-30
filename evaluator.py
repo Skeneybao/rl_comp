@@ -39,6 +39,7 @@ def evaluate_model(config: EvaluatorConfig):
         os.makedirs(eval_res_path)
 
     logger.info(f'evaluating model {config.model_name} on {config.date}')
+    logger.info(f'full config: {config}')
     feature_engine = config.feature_engine_type(**config.feature_engine_param)
 
     env = TrainingStockEnv(
@@ -92,7 +93,7 @@ if __name__ == '__main__':
         data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
         date='ALL',
         training_res_path='/mnt/data3/rl-data/training_res/7u6e3hgm/HkUyH/',
-        model_name='5060000.pt',
+        model_name='5080000.pt',
         feature_engine_type=FeatureEngineVersion3_Simple,
         feature_engine_param={'max_position': 10},
         model_type=DNN,
