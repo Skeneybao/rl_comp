@@ -3,8 +3,13 @@ from typing import List, Dict
 from training.model_io.output_wrapper import ActionType
 
 
-def validate_action(obs: Dict, action: ActionType, max_position:int) -> (ActionType, bool):
+def validate_action(obs: Dict, action: ActionType, max_position:int, signal_risk_thresh:float) -> (ActionType, bool):
     side, vol, price = action
+
+    if side == 0 and obs['signal0'] < signal_risk_thresh:
+        return (1, 0, 0.), True
+    if side == 2 and obs['signal0'] > -signal_risk_thresh:
+        return (1, 0, 0.), True
 
     # Extract data from the state
     ask_prices = [obs['ap0'], obs['ap1'], obs['ap2'],
@@ -29,6 +34,7 @@ def validate_action(obs: Dict, action: ActionType, max_position:int) -> (ActionT
 
     # Handle different sides
     if side == 0:  # Buy
+
         # Check for max position limit
         if code_net_position + vol > max_position:
             vol = max_position - code_net_position

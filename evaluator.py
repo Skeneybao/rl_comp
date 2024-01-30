@@ -1,18 +1,17 @@
-import os
 import csv
+import os
 from dataclasses import dataclass
-from typing import Callable, Dict, Type, Any
+from typing import Callable, Type, Any
 
-import numpy as np
 import torch
 from torch import nn
 
-from training.model_io.featureEngine import FeatureEngineVersion3_Simple, FeatureEngine
-from training.model.DNN import DNN
 from training.env.trainingEnv import TrainingStockEnv
-from training.model_io.output_wrapper import Action11OutputWrapper, Action3OutputWrapper, ModelOutputWrapper
-from training.model_io.output_wrapper import ActionType
+from training.model.DNN import DNN
+from training.model_io.featureEngine import FeatureEngineVersion3_Simple, FeatureEngine
+from training.model_io.output_wrapper import Action3OutputWrapper, ModelOutputWrapper
 from training.reward.rewards import *
+from training.util.explicit_control import ExplicitControlConf
 from training.util.logger import logger
 from training.util.validate_action import validate_action
 
@@ -27,9 +26,9 @@ class EvaluatorConfig:
     model_param: Dict[str, Any]
     output_wrapper_type: Type[ModelOutputWrapper]
     reward_fn: Callable[[int, Dict, Dict, ActionType], float]
+    explicit_config: ExplicitControlConf
     data_path: str = '/home/rl-comp/Git/rl_comp/env/stock_raw/data'
     date: str = 'ALL'
-
     device: str = 'cpu'
 
 
@@ -50,8 +49,8 @@ def evaluate_model(config: EvaluatorConfig):
         save_daily_metric=True,
         save_code_metric=True,
         reward_fn=config.reward_fn,
-        max_postion=feature_engine.max_position,    
-        )
+        max_postion=feature_engine.max_position,
+    )
 
     model = config.model_type(
         input_dim=feature_engine.get_input_shape(),
@@ -66,12 +65,13 @@ def evaluate_model(config: EvaluatorConfig):
     while env.reset_cnt <= len(env):
         state = feature_engine.get_feature(obs)
         log_states(env, obs, feature_engine, state, reward)
-        if obs['warming-up']:
-            valid_action = (1, 0, 0)
-        else:
+        if not obs['warming-up']:
             action, _, _ = model_output_wrapper.select_action(obs, state)
-            valid_action, is_invalid = validate_action(obs, action, max_position=feature_engine.max_position)
-        obs, reward, _ = env.step(valid_action)
+            valid_action, is_invalid = validate_action(obs, action, max_position=feature_engine.max_position,
+                                                       signal_risk_thresh=config.explicit_config.signal_risk_thresh)
+            obs, reward, _ = env.step(valid_action)
+        else:
+            obs, reward, _ = env.step((1, 0, 0))
 
     logger.info(f'evaluating model {config.model_name} on {config.date} done.')
 
@@ -79,19 +79,18 @@ def evaluate_model(config: EvaluatorConfig):
 
 
 def log_states(env, obs, feature_engine, state, reward):
-
     current_code = obs['code']
     if env.save_code_metric and current_code in env.codes_to_log:
-        output_file_path = os.path.join(env.save_metric_path, 'code_metric',f"{env.date}_{current_code}_states.csv")
+        output_file_path = os.path.join(env.save_metric_path, 'code_metric', f"{env.date}_{current_code}_states.csv")
         file_exists = os.path.exists(output_file_path)
         with open(output_file_path, 'a', newline='') as csvfile:
             csv_writer = csv.DictWriter(csvfile, fieldnames=feature_engine.feature_names + ['reward'])
             if not file_exists:
                 csv_writer.writeheader()
             csv_writer.writerow(dict(zip(feature_engine.feature_names + ['reward'], np.append(state.numpy(), reward))))
-        
+
+
 if __name__ == '__main__':
-    
     config = EvaluatorConfig(
         data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
         date='ALL',

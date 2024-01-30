@@ -13,6 +13,7 @@ from training.model_io.featureEngine import FeatureEngine
 from training.model_io.get_feature_engine import get_feature_engine_type
 from training.model_io.output_wrapper import ActionType, get_output_wrapper, ModelOutputWrapper
 from training.reward.get_reward import get_reward
+from training.util.explicit_control import ExplicitControlConf
 
 
 @dataclass
@@ -23,18 +24,15 @@ class ExpInfo:
     nni_exp_id: str
     nni_trial_id: str
 
-
 @dataclass
 class ControlConf:
     training_episode_num: int
     learning_period: int
 
-
 @dataclass
 class EnvConf:
     mode: str
     reward_fn: Callable[[int, Dict, Dict, ActionType], float]
-
 
 def get_git_info() -> (str, str, bool):
     git_branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode('utf-8').strip()
@@ -68,6 +66,7 @@ def get_param_from_nni() -> Tuple[
     Dict[str, Any],
     ActorConfig,
     LearnerConfig,
+    ExplicitControlConf,
 ]:
     raw_params = nni.get_next_parameter()
 
@@ -115,6 +114,10 @@ def get_param_from_nni() -> Tuple[
         **{k.replace('learner_config$', ''): v for k, v in params.items() if k.startswith('learner_config$')}
     )
 
+    explicit_config = ExplicitControlConf(
+        signal_risk_thresh=params['signal_risk_thresh'],
+    )
+
     return (control_param,
             env_param,
             feature_engine_type, feature_engine_param,
@@ -123,4 +126,5 @@ def get_param_from_nni() -> Tuple[
             replay_buffer_param,
             actor_config,
             learner_config,
+            explicit_config,
             )
