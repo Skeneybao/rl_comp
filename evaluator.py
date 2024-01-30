@@ -58,7 +58,7 @@ def evaluate_model(config: EvaluatorConfig):
         **config.model_param)
     checkpoint = torch.load(os.path.join(config.training_res_path, 'models', config.model_name))
     model.load_state_dict(checkpoint['model_state_dict'])
-    model_output_wrapper = Action11OutputWrapper(model, device=config.device)
+    model_output_wrapper = config.output_wrapper_type(model, device=config.device)
 
     obs, reward, _ = env.reset()
 
@@ -91,14 +91,14 @@ if __name__ == '__main__':
     config = EvaluatorConfig(
         data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
         date='ALL',
-        training_res_path='/mnt/data3/rl-data/training_res/wg0ftcbs/zRL2g',
-        model_name='7100000.pt',
+        training_res_path='/mnt/data3/rl-data/training_res/7u6e3hgm/HkUyH/',
+        model_name='5060000.pt',
         feature_engine_type=FeatureEngineVersion3_Simple,
         feature_engine_param={'max_position': 10},
         model_type=DNN,
         model_param={'hidden_dim': [32, 32]},
         output_wrapper_type=Action3OutputWrapper,
-        reward_fn=scaled_net_return,
+        reward_fn=normalized_net_return,
     )
 
     evaluate_model(config)
