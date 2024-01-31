@@ -1,10 +1,11 @@
 import random
-from typing import Iterable, Tuple, List
+from typing import Iterable, Tuple, List, Optional
 
 import numba
 import numpy as np
 
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.util.sumtree import SumTree
 
 
 @numba.jit(nopython=True)
@@ -64,14 +65,14 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     def __init__(self, capacity: int, beta: float = 0.4, alpha: float = 0.6, epsilon: float = 1e-6):
         super().__init__(capacity)
         self.memory = CircularBuffer(capacity)
-        self.weight = CircularBuffer(capacity)
+        self.weight = SumTree(capacity)
         self.beta = beta
         self.alpha = alpha
         self.epsilon = epsilon
 
     def push(self, data):
         self.memory.append(data)
-        self.weight.append(1.0)
+        self.weight.add(1.0)
 
     def sample(self, batch_size: int, replay_by: str = 'random') -> Iterable:
         assert replay_by in ['random']
@@ -80,6 +81,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         else:
             raise NotImplementedError
 
+    def sample_idx(self, total_weight: Optional[float] = None):
+        if total_weight is None:
+            total_weight = self.weight.total()
+        rnd = random.random() * total_weight
+        idx, raw_weight = self.weight.get_index_data(rnd)
+        return idx, raw_weight
+
     def sample_random(self, batch_size: int):
         """
 
@@ -87,36 +95,39 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         :return: samples: (batch_size,), sample_indices: (batch_size,), loss_weights: (batch_size,)
         """
         # get prioritized experience replay weight
-        weight = np.array(self.weight) + self.epsilon
-        prob = np.power(weight, self.alpha) / np.sum(np.power(weight, self.alpha))
-        idxs = np.random.choice(len(self.memory), batch_size, p=prob)
-        loss_weights = np.power(len(self.memory) * prob[idxs], -self.beta)
+        samples = [self.sample_idx() for _ in range(batch_size)]
+        idxs, raw_weights = zip(*samples)
+        loss_weights = np.power(len(self.memory) * np.array(raw_weights), -self.beta)
         return [self.memory[i] for i in idxs], idxs, loss_weights
 
-    def sample_batched_ordered(self, batch_size: int, batch_length: int
-                               ) -> Tuple[Iterable[Iterable], Iterable, np.ndarray]:
+    def sample_batched_ordered(
+            self, batch_size: int, batch_length: int
+    ) -> Tuple[Iterable[Iterable], Iterable, np.ndarray]:
         """
 
         :param batch_size:
         :param batch_length:
         :return: samples: (batch_size, batch_length), sample_indices: (batch_size,), loss_weights: (batch_size,)
         """
+        idxs = []
+        raw_weights = []
+        while len(idxs) < batch_size:
+            idx, raw_weight = self.sample_idx()
+            if idx + batch_length >= len(self.memory):
+                continue
+            idxs.append(idx)
+            raw_weights.append(raw_weight)
         samples = []
-        weight = np.array(self.weight) + self.epsilon
-        prob = np.power(weight, self.alpha) / np.sum(np.power(weight, self.alpha))
-
-        idxs = fast_choice_multiple(len(self.memory) - batch_length + 1,
-                                    prob[0:len(self.memory) - batch_length + 1],
-                                    batch_size)
         for start_id in idxs:
             sample = [self.memory[i] for i in range(start_id, start_id + batch_length)]
             samples.append(sample)
 
-        loss_weights = np.power(len(self.memory) * prob[idxs], -self.beta)
+        loss_weights = np.power(len(self.memory) * np.array(raw_weights), -self.beta)
         return samples, idxs, loss_weights
 
     def update_weight(self, idx: int, weight: float):
-        self.weight[idx] = weight
+        weight = np.power(weight, self.alpha) + self.epsilon
+        self.weight.update(idx, weight)
 
     def update_weight_batch(self, ids: Iterable[int], weights: Iterable[float]):
         for idx, weight in zip(ids, weights):

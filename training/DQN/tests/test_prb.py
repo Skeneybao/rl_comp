@@ -1,4 +1,7 @@
+import random
 import unittest
+
+import numpy as np
 
 from training.DQN.actor import ActorConfig, Actor
 from training.env.trainingEnv import TrainingStockEnv
@@ -51,9 +54,24 @@ class ReplayBufferTestCase(unittest.TestCase):
         # update
         idx = 42
         self.replay_buffer.update_weight(idx, 100000000)
-        self.assertEqual(self.replay_buffer.weight[idx], 100000000)
         samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(10, 5)
         self.assertIn(42, idxs)
+
+        # update another
+        idx = 43
+        self.replay_buffer.update_weight(idx, 200000000)
+        samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(10, 5)
+        self.assertIn(43, idxs)
+
+        # update all by random
+        for i in range(len(self.replay_buffer)):
+            self.replay_buffer.update_weight(i, random.random() * 10)
+
+        for _ in range(10):
+            samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(100, 5)
+            avg_weights = np.mean([self.replay_buffer.weight[i] for i in idxs])
+            all_weights = np.mean([self.replay_buffer.weight[i] for i in range(len(self.replay_buffer))])
+            self.assertGreater(avg_weights, all_weights)
 
 
 if __name__ == '__main__':
