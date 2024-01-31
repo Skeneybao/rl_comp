@@ -45,15 +45,16 @@ class ActorTestCase(unittest.TestCase):
         )
 
         # actor should insert into replay buffer
+        res = 0
         for _ in range(10):
-            actor.step()
-        self.assertTrue(len(replay_buffer.memory) == 10)
+            res += int(actor.step())
+        self.assertTrue(len(replay_buffer.memory) == res)
 
         for _ in range(1024 - 10):
-            actor.step()
-        self.assertTrue(len(replay_buffer.memory) == 1024)
+            res += int(actor.step())
+        self.assertTrue(len(replay_buffer.memory) == res)
 
-        for _ in range(100):
+        for _ in range(1000):
             actor.step()
         self.assertTrue(len(replay_buffer.memory) == 1024)
 

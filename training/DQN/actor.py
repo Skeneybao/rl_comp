@@ -54,7 +54,7 @@ class Actor:
             output_wrapper: ModelOutputWrapper,
             replay_buffer: ReplayBuffer,
             config: ActorConfig,
-            explicit_config: ExplicitControlConf,
+            explicit_config: ExplicitControlConf = ExplicitControlConf(-float('inf')),
     ):
         self.env = env
         self.feature_engine = feature_engine
@@ -68,6 +68,7 @@ class Actor:
     def step(self):
 
         self.log_states()
+        warming_up = self.this_obs['warming-up']
         if not self.this_obs['warming-up']:
             if if_epsilon_greedy(self.config, self.env.step_cnt):
                 action, _, model_output = self.output_wrapper.random_action(self.this_obs, self.this_state)
@@ -86,6 +87,7 @@ class Actor:
         self.last_reward = reward
         self.this_obs = next_obs
         self.this_state = next_state
+        return not warming_up
 
     def log_states(self):
         current_code = self.this_obs['code']

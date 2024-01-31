@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from training.replay.PRB import PrioritizedReplayBuffer
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.logger import logger
 from training.util.torch_device import auto_get_device
@@ -18,7 +19,7 @@ class LearnerConfig:
     batch_size: int = 128
     gamma: float = 0.99
     tau: float = 0.005
-    lr: float = 1e-8
+    lr: float = 3e-4
     optimizer_type: str = 'SGD'
     device: torch.device = auto_get_device()
     model_save_step: int = 1000
@@ -95,66 +96,19 @@ class DQNLearner(Learner):
         return optimizer
 
     def step(self) -> Optional[float]:
-        return self.step_multiple()
-
-    def step_single(self) -> Optional[float]:
-        """
-        Run a single optimization step of a batch.
-        """
-        if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
-            return None
-
-        transitions = self.replay_buffer.sample(self.config.batch_size)
-        state, model_output, reward, next_state, done = zip(*transitions)
-
-        state_batch = torch.stack(state).to(self.config.device)
-        action_batch = torch.stack(model_output).argmax(1).unsqueeze(1).to(self.config.device)
-        reward_batch = torch.tensor(reward).to(self.config.device)
-        next_state_batch = torch.stack(next_state).to(self.config.device)
-        done_batch = torch.tensor(done).to(self.config.device)
-
-        non_final_mask = done_batch == 0
-        non_final_next_states = next_state_batch[non_final_mask]
-
-        # Q(s_t, a)
-        state_action_values = self.model(state_batch).gather(1, action_batch)
-
-        # V(s_{t+1}) = max_a Q(s_{t+1}, a)
-        next_state_values = torch.zeros(self.config.batch_size, device=self.config.device)
-        with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_model(non_final_next_states).max(1)[0].detach()
-        # expected Q values
-        expected_state_action_values = (next_state_values * self.config.gamma) + reward_batch
-
-        # Huber loss
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
-
-        # optimize
-        self.optimizer.zero_grad()
-        loss.backward()
-        # grad clipping
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_max_norm)
-        self.optimizer.step()
-
-        self.step_cnt += 1
-
-        if self.saving and self.step_cnt % self.config.model_save_step == 0:
-            path = os.path.join(self.model_saving_path, f'{self.step_cnt}.pt')
-            logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
-            self.save_model(path, self.model, self.optimizer)
-            self.latest_model_num = self.step_cnt
-
-        return loss.item()
-
-    def step_multiple(self) -> Optional[float]:
         """
         Run a single optimization step of a batch with multiple step reward.
         """
         if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
             return None
 
-        sequences = self.replay_buffer.sample_batched_ordered(int(self.config.batch_size),
-                                                              int(self.config.reward_steps))
+        if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
+            sequences, sample_indices, loss_weights = self.replay_buffer.sample_batched_ordered(
+                int(self.config.batch_size),
+                int(self.config.reward_steps))
+        else:
+            sequences = self.replay_buffer.sample_batched_ordered(int(self.config.batch_size),
+                                                                  int(self.config.reward_steps))
         # Prepare batches
         state_batch, action_batch, reward_batch, next_state_batch, done_batch = [], [], [], [], []
         for sequence in sequences:
@@ -200,7 +154,11 @@ class DQNLearner(Learner):
                 self.config.gamma ** self.config.reward_steps)) + reward_batch
 
         # Huber loss
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
+        losses = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1), reduction='none')
+        if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
+            losses = losses * torch.tensor(loss_weights).unsqueeze(1).to(self.config.device)
+            self.replay_buffer.update_weight_batch(sample_indices, losses.detach().flatten().tolist())
+        loss = torch.mean(losses)
 
         # optimize
         self.optimizer.zero_grad()

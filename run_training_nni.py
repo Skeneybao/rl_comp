@@ -9,6 +9,7 @@ from evaluator import EvaluatorConfig, evaluate_model
 from training.DQN.actor import Actor, cal_epsilon
 from training.DQN.learner import DQNLearner
 from training.env.trainingEnv import TrainingStockEnv
+from training.replay.PRB import PrioritizedReplayBuffer
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.exp_management import get_exp_info, get_param_from_nni
 from training.util.logger import logger
@@ -76,7 +77,7 @@ if __name__ == '__main__':
     model = model_type(input_dim=feature_engine.get_input_shape(), output_dim=output_wrapper_type.get_output_shape(),
                        **model_param)
     model_output_wrapper = output_wrapper_type(model, **output_wrapper_param)
-    replay_buffer = ReplayBuffer(**replay_buffer_param)
+    replay_buffer = PrioritizedReplayBuffer(**replay_buffer_param)
 
     # env
     env = TrainingStockEnv(

@@ -242,5 +242,4 @@ class FeatureEngineVersion3_Simple(FeatureEngineVersion3):
         return ['time', 'logPrice', 'midPrice', 'rule_des', 'pos', 'sig0', 'sig1', 'sig2', 'sig0_rank', 'sig1_rank', 'sig2_rank',
                 'sig0_avg', 'sig1_avg', 'sig2_avg', 'priceStd', 'spread', ] 
 
-FeatureEngineDummy = FeatureEngineVersion1
-
+FeatureEngineDummy = FeatureEngineVersion2
