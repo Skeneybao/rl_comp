@@ -25,6 +25,8 @@ class LearnerConfig:
     # not start training until replay buffer has at least this number of transitions
     minimal_buffer_size: int = 1000
 
+    update_target_model_step: int = 100
+
     reward_steps: int = 5
     grad_max_norm: float = 1.
 
@@ -217,9 +219,13 @@ class DQNLearner(Learner):
             self.save_model(path, self.model, self.optimizer)
             self.latest_model_num = self.step_cnt
 
+        if self.step_cnt % self.config.update_target_model_step == 0:
+            self.update_target_model()
+
         return loss.item()
 
     def update_target_model(self):
+        logger.debug(f'Update target model at learner step {self.step_cnt}')
         target_params = self.target_model.state_dict()
         params = self.model.state_dict()
 
