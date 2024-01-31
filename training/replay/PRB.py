@@ -1,4 +1,6 @@
+import asyncio
 import random
+from concurrent.futures import ThreadPoolExecutor
 from typing import Iterable, Tuple, List, Optional
 
 import numba
@@ -69,6 +71,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self.beta = beta
         self.alpha = alpha
         self.epsilon = epsilon
+        self.prefetch_count = 1
 
     def push(self, data):
         self.memory.append(data)
@@ -77,7 +80,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     def sample(self, batch_size: int, replay_by: str = 'random') -> Iterable:
         assert replay_by in ['random']
         if replay_by == 'random':
-            return self.sample_random(batch_size)
+            return self.sample_random_sync(batch_size)
         else:
             raise NotImplementedError
 
@@ -88,7 +91,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         idx, raw_weight = self.weight.get_index_data(rnd)
         return idx, raw_weight
 
-    def sample_random(self, batch_size: int):
+    def sample_random_sync(self, batch_size: int):
         """
 
         :param batch_size:
@@ -100,7 +103,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         loss_weights = np.power(len(self.memory) * np.array(raw_weights), -self.beta)
         return [self.memory[i] for i in idxs], idxs, loss_weights
 
-    def sample_batched_ordered(
+    def sample_batched_ordered_sync(
             self, batch_size: int, batch_length: int
     ) -> Tuple[Iterable[Iterable], Iterable, np.ndarray]:
         """
@@ -135,3 +138,24 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
     def __len__(self):
         return len(self.memory)
+
+    async def async_prefetch(self, batch_size: int, sample_method, *args):
+        loop = asyncio.get_event_loop()
+
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                loop.run_in_executor(
+                    executor, sample_method, batch_size, *args
+                )
+                for _ in range(self.prefetch_count)
+            ]
+            for future in asyncio.as_completed(futures):
+                yield await future
+
+    def sample_random(self, batch_size: int):
+        return self.async_prefetch(batch_size, self.sample_random_sync)
+
+    def sample_batched_ordered(
+            self, batch_size: int, batch_length: int
+    ):
+        return self.async_prefetch(batch_size, self.sample_batched_ordered_sync, batch_length)

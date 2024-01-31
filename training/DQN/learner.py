@@ -103,7 +103,7 @@ class DQNLearner(Learner):
             return None
 
         if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
-            sequences, sample_indices, loss_weights = self.replay_buffer.sample_batched_ordered(
+            sequences, sample_indices, loss_weights = self.replay_buffer.sample_batched_ordered_sync(
                 int(self.config.batch_size),
                 int(self.config.reward_steps))
         else:
