@@ -119,6 +119,7 @@ if __name__ == '__main__':
     logger.warning(f"replay_buffer_param: {replay_buffer_param}")
     logger.warning(f"actor_config: {actor_config}")
     logger.warning(f"learner_config: {learner_config}")
+    logger.warning(f"explicit_config: {explicit_config}")
 
     #################################
     # launch exp
