@@ -1,8 +1,36 @@
-from typing import Iterable, Tuple
+import random
+from typing import Iterable, Tuple, List
 
+import numba
 import numpy as np
 
 from training.replay.ReplayBuffer import ReplayBuffer
+
+
+@numba.jit(nopython=True)
+def fast_choice(num: int, probs: np.ndarray) -> int:
+    x = random.random() * np.sum(probs)
+    cum = 0
+    for i, p in enumerate(probs):
+        cum += p
+        if x < cum:
+            return i
+    return num - 1
+
+
+@numba.jit(nopython=True)
+def fast_choice_multiple(num: int, probs: np.ndarray, size: int) -> List[int]:
+    res = []
+    s = np.sum(probs)
+    for _ in range(size):
+        x = random.random() * s
+        cum = 0
+        for i, p in enumerate(probs):
+            cum += p
+            if x < cum:
+                break
+        res.append(num - 1)
+    return res
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
@@ -16,7 +44,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     def push(self, data):
         self.memory.append(data)
         self.weight.append(1)
-        self.weight = self.weight[-len(self.memory):]
+        while len(self.weight) > len(self.memory):
+            self.weight.pop(0)
 
     def sample(self, batch_size: int, replay_by: str = 'random') -> Iterable:
         assert replay_by in ['random']
@@ -38,25 +67,6 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         loss_weights = np.power(len(self.memory) * prob[idxs], -self.beta)
         return [self.memory[i] for i in idxs], idxs, loss_weights
 
-    def __sample_ordered(self, batch_size: int):
-        raise NotImplementedError('Ordered sampling is not supported in prioritized replay buffer.')
-
-    def __sample_ordered(self, batch_length: int, prob: np.ndarray):
-        """
-
-        :param batch_length:
-        :return: samples: (batch_length,), idx
-        """
-        # assumes that pushed order is the same as the order of the episodes
-        # this may not ture for multithreading envs
-        if len(self.memory) < batch_length:
-            raise ValueError(f'Not enough data in replay buffer: {len(self.memory)} < {batch_length}')
-        prob = prob[0:len(self.memory) - batch_length + 1]
-        prob = prob / np.sum(prob)
-        start_id = np.random.choice(len(self.memory) - batch_length + 1, p=prob)
-        # possibly segmented by a done > 0. That is, one batch can contain multiple episodes.
-        return [self.memory[i] for i in range(start_id, start_id + batch_length)], start_id
-
     def sample_batched_ordered(self, batch_size: int, batch_length: int
                                ) -> Tuple[Iterable[Iterable], Iterable, np.ndarray]:
         """
@@ -66,13 +76,15 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         :return: samples: (batch_size, batch_length), sample_indices: (batch_size,), loss_weights: (batch_size,)
         """
         samples = []
-        idxs = []
         weight = np.array(self.weight) + self.epsilon
         prob = np.power(weight, self.alpha) / np.sum(np.power(weight, self.alpha))
-        for _ in range(batch_size):
-            sample, idx = self.__sample_ordered(batch_length, prob)
+
+        idxs = fast_choice_multiple(len(self.memory) - batch_length + 1,
+                                    prob[0:len(self.memory) - batch_length + 1],
+                                    batch_size)
+        for start_id in idxs:
+            sample = [self.memory[i] for i in range(start_id, start_id + batch_length)]
             samples.append(sample)
-            idxs.append(idx)
 
         loss_weights = np.power(len(self.memory) * prob[idxs], -self.beta)
         return samples, idxs, loss_weights
@@ -80,8 +92,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     def update_weight(self, idx: int, weight: float):
         self.weight[idx] = weight
 
-    def update_weight_batch(self, idxs: Iterable[int], weights: Iterable[float]):
-        for idx, weight in zip(idxs, weights):
+    def update_weight_batch(self, ids: Iterable[int], weights: Iterable[float]):
+        for idx, weight in zip(ids, weights):
             self.update_weight(idx, weight)
 
     def __len__(self):

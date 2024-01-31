@@ -38,6 +38,7 @@ class ReplayBufferTestCase(unittest.TestCase):
     def test_sample_batched_ordered(self):
         # fetch
         samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(10, 5)
+        self.assertEqual(len(samples_batches), 10)
         for samples, idx in zip(samples_batches, idxs):
             self.assertEqual(len(samples), 5)
             saved_state = None
