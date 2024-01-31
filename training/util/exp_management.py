@@ -12,6 +12,8 @@ from training.model.get_model import get_model
 from training.model_io.featureEngine import FeatureEngine
 from training.model_io.get_feature_engine import get_feature_engine_type
 from training.model_io.output_wrapper import ActionType, get_output_wrapper, ModelOutputWrapper
+from training.replay.ReplayBuffer import ReplayBuffer
+from training.replay.get_replay_buffer import get_replay_buffer
 from training.reward.get_reward import get_reward
 from training.util.explicit_control import ExplicitControlConf
 
@@ -63,6 +65,7 @@ def get_param_from_nni() -> Tuple[
     Type[FeatureEngine], Dict[str, Any],
     Type[nn.Module], Dict[str, Any],
     Type[ModelOutputWrapper], Dict[str, Any],
+    Type[ReplayBuffer],
     Dict[str, Any],
     ActorConfig,
     LearnerConfig,
@@ -101,6 +104,7 @@ def get_param_from_nni() -> Tuple[
                             for k, v in params.items() if k.startswith('output_wrapper$')}
 
     # replay buffer
+    replay_buffer_type = get_replay_buffer(params['replay_buffer_type'])
     replay_buffer_param = {k.replace('replay_buffer$', ''): v
                            for k, v in params.items() if k.startswith('replay_buffer$')}
 
@@ -123,6 +127,7 @@ def get_param_from_nni() -> Tuple[
             feature_engine_type, feature_engine_param,
             model_type, model_param,
             output_wrapper_type, output_wrapper_param,
+            replay_buffer_type,
             replay_buffer_param,
             actor_config,
             learner_config,

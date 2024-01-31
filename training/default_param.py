@@ -13,6 +13,7 @@ default_param = {
     # 'feature_engine$sample_param': '1'
 
     ## replay buffer
+    'replay_buffer_type': 'ReplayBuffer',
     'replay_buffer$capacity': 100000,
 
     ## model param
