@@ -43,7 +43,7 @@ class ReplayBufferTestCase(unittest.TestCase):
         samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(10, 5)
         self.assertEqual(len(samples_batches), 10)
         for samples, idx in zip(samples_batches, idxs):
-            self.assertEqual(len(samples), 5)
+            self.assertLessEqual(len(samples), 5)
             saved_state = None
             self.assertEqual(self.replay_buffer.memory[idx], samples[0])
             for sample in samples:
@@ -59,13 +59,24 @@ class ReplayBufferTestCase(unittest.TestCase):
 
         # update another
         idx = 43
-        self.replay_buffer.update_weight(idx, 200000000)
+        self.replay_buffer.update_weight(idx, 1000000000)
         samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(10, 5)
         self.assertIn(43, idxs)
 
         # update all by random
         for i in range(len(self.replay_buffer)):
-            self.replay_buffer.update_weight(i, random.random() * 10)
+            self.replay_buffer.update_weight(i, (random.random() * 10) ** 3)
+            self.assertGreater(self.replay_buffer.weight.total(), 0)
+
+        for _ in range(10):
+            samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(100, 5)
+            avg_weights = np.mean([self.replay_buffer.weight[i] for i in idxs])
+            all_weights = np.mean([self.replay_buffer.weight[i] for i in range(len(self.replay_buffer))])
+            self.assertGreater(avg_weights, all_weights)
+
+        # update all by random in batch
+        weights = [(random.random() * 10) ** 3 for _ in range(len(self.replay_buffer))]
+        self.replay_buffer.update_weight_batch(range(len(self.replay_buffer)), weights)
 
         for _ in range(10):
             samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(100, 5)

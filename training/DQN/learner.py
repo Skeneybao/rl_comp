@@ -110,7 +110,8 @@ class DQNLearner(Learner):
             sequences = self.replay_buffer.sample_batched_ordered(int(self.config.batch_size),
                                                                   int(self.config.reward_steps))
         # Prepare batches
-        state_batch, action_batch, reward_batch, next_state_batch, done_batch = [], [], [], [], []
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch, discount_batch = (
+            [], [], [], [], [], [])
         for sequence in sequences:
             # Initialize variables for n-step calculations
             accum_reward = 0.0
@@ -132,12 +133,14 @@ class DQNLearner(Learner):
             reward_batch.append(accum_reward)
             next_state_batch.append(final_state)
             done_batch.append(done)
+            discount_batch.append(discount)
 
         state_batch = torch.stack(state_batch).to(self.config.device)
         action_batch = torch.stack(action_batch).argmax(1).unsqueeze(1).to(self.config.device)
         reward_batch = torch.tensor(reward_batch).to(self.config.device)
         next_state_batch = torch.stack(next_state_batch).to(self.config.device)
         done_batch = torch.tensor(done_batch).to(self.config.device)
+        discount_batch = torch.tensor(discount_batch).to(self.config.device)
 
         non_final_mask = done_batch == 0
         non_final_next_states = next_state_batch[non_final_mask]
@@ -150,8 +153,7 @@ class DQNLearner(Learner):
         with torch.no_grad():
             next_state_values[non_final_mask] = self.target_model(non_final_next_states).max(1)[0].detach()
         # expected Q values with n-step rewards
-        expected_state_action_values = (next_state_values * (
-                self.config.gamma ** self.config.reward_steps)) + reward_batch
+        expected_state_action_values = (next_state_values * discount_batch) + reward_batch
 
         # Huber loss
         losses = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1), reduction='none')

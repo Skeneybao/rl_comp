@@ -1,7 +1,7 @@
 import asyncio
 import random
 from concurrent.futures import ThreadPoolExecutor
-from typing import Iterable, Tuple, List, Optional
+from typing import Iterable, Tuple, List
 
 import numba
 import numpy as np
@@ -84,12 +84,15 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         else:
             raise NotImplementedError
 
-    def sample_idx(self, total_weight: Optional[float] = None):
-        if total_weight is None:
-            total_weight = self.weight.total()
-        rnd = random.random() * total_weight
+    def sample_idx(self):
+        rnd = random.random() * self.weight.total()
         idx, raw_weight = self.weight.get_index_data(rnd)
         return idx, raw_weight
+
+    def batch_sample_idx(self, batch_size: int):
+        rnds = np.random.rand(batch_size) * self.weight.total()
+        idxs, raw_weights = self.weight.batch_get_index_data(rnds)
+        return idxs, raw_weights
 
     def sample_random_sync(self, batch_size: int):
         """
@@ -98,8 +101,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         :return: samples: (batch_size,), sample_indices: (batch_size,), loss_weights: (batch_size,)
         """
         # get prioritized experience replay weight
-        samples = [self.sample_idx() for _ in range(batch_size)]
-        idxs, raw_weights = zip(*samples)
+        idxs, raw_weights = self.batch_sample_idx(batch_size)
         loss_weights = np.power(len(self.memory) * np.array(raw_weights), -self.beta)
         return [self.memory[i] for i in idxs], idxs, loss_weights
 
@@ -112,14 +114,17 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         :param batch_length:
         :return: samples: (batch_size, batch_length), sample_indices: (batch_size,), loss_weights: (batch_size,)
         """
-        idxs = []
-        raw_weights = []
-        while len(idxs) < batch_size:
-            idx, raw_weight = self.sample_idx()
-            if idx + batch_length >= len(self.memory):
-                continue
-            idxs.append(idx)
-            raw_weights.append(raw_weight)
+        idxs, raw_weights = self.batch_sample_idx(batch_size)
+        # refetch if start_id + batch_length is out of range
+        refetch_idx = [(i, idx) for i, idx in enumerate(idxs) if idx + batch_length > len(self.memory)]
+
+        while len(refetch_idx) > 0:
+            idxs_refetch, raw_weights_refetch = self.batch_sample_idx(len(refetch_idx))
+            for refresh_i, (i, _) in enumerate(refetch_idx):
+                idxs[i] = idxs_refetch[refresh_i]
+                raw_weights[i] = raw_weights_refetch[refresh_i]
+            refetch_idx = [(i, idx) for i, idx in enumerate(idxs) if idx + batch_length > len(self.memory)]
+
         samples = []
         for start_id in idxs:
             sample = [self.memory[i] for i in range(start_id, start_id + batch_length)]
@@ -133,8 +138,9 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self.weight.update(idx, weight)
 
     def update_weight_batch(self, ids: Iterable[int], weights: Iterable[float]):
-        for idx, weight in zip(ids, weights):
-            self.update_weight(idx, weight)
+        ids = np.array(ids, dtype=np.int32)
+        weight = np.power(weights, self.alpha) + self.epsilon
+        self.weight.batch_update(ids, weight)
 
     def __len__(self):
         return len(self.memory)
@@ -153,9 +159,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
                 yield await future
 
     def sample_random(self, batch_size: int):
-        return self.async_prefetch(batch_size, self.sample_random_sync)
+        # return self.async_prefetch(batch_size, self.sample_random_sync)
+        return self.sample_random_sync(batch_size)
 
     def sample_batched_ordered(
             self, batch_size: int, batch_length: int
     ):
-        return self.async_prefetch(batch_size, self.sample_batched_ordered_sync, batch_length)
+        # return self.async_prefetch(batch_size, self.sample_batched_ordered_sync, batch_length)
+        return self.sample_batched_ordered_sync(batch_size, batch_length)

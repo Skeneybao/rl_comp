@@ -8,8 +8,8 @@ ext_modules = [
         "training.util.sumtree",
         ["training/util/sumtree.pyx"],
         include_dirs=[numpy.get_include()],
-        language="c++",
-        extra_compile_args=["-O3"]
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp'],
     )
 ]
 
