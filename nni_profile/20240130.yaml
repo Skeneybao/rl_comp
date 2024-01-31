@@ -7,7 +7,7 @@ search_space:
     _value: [ 'normalized_net_return', 'scaled_net_return' ]
   signal_risk_thres:
     _type: choice
-    _value: [ -.inf, 0. ]
+    _value: [ -10000000000.0 0. ]
 
 
 
