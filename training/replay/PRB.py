@@ -25,27 +25,53 @@ def fast_choice_multiple(num: int, probs: np.ndarray, size: int) -> List[int]:
     for _ in range(size):
         x = random.random() * s
         cum = 0
+        i = 0
         for i, p in enumerate(probs):
             cum += p
             if x < cum:
                 break
-        res.append(num - 1)
+        res.append(i)
     return res
+
+
+class CircularBuffer:
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.memory = list()
+        self.idx = 0
+
+    def push(self, data):
+        if len(self.memory) < self.capacity:
+            self.memory.append(data)
+        else:
+            self.memory[self.idx] = data
+            self.idx = (self.idx + 1) % self.capacity
+
+    def append(self, data):
+        self.push(data)
+
+    def __len__(self):
+        return len(self.memory)
+
+    def __getitem__(self, idx):
+        return self.memory[idx]
+
+    def __setitem__(self, idx, value):
+        self.memory[idx] = value
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
     def __init__(self, capacity: int, beta: float = 0.4, alpha: float = 0.6, epsilon: float = 1e-6):
         super().__init__(capacity)
-        self.weight = list()
+        self.memory = CircularBuffer(capacity)
+        self.weight = CircularBuffer(capacity)
         self.beta = beta
         self.alpha = alpha
         self.epsilon = epsilon
 
     def push(self, data):
         self.memory.append(data)
-        self.weight.append(1)
-        while len(self.weight) > len(self.memory):
-            self.weight.pop(0)
+        self.weight.append(1.0)
 
     def sample(self, batch_size: int, replay_by: str = 'random') -> Iterable:
         assert replay_by in ['random']

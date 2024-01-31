@@ -50,8 +50,8 @@ class ReplayBufferTestCase(unittest.TestCase):
                 saved_state = next_state
         # update
         idx = 42
-        self.replay_buffer.update_weight(idx, 10000)
-        self.assertEqual(self.replay_buffer.weight[idx], 10000)
+        self.replay_buffer.update_weight(idx, 100000000)
+        self.assertEqual(self.replay_buffer.weight[idx], 100000000)
         samples_batches, idxs, loss_weights = self.replay_buffer.sample_batched_ordered(10, 5)
         self.assertIn(42, idxs)
 
