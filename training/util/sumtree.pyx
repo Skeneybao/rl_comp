@@ -4,6 +4,11 @@ from cython.parallel import prange
 from cython cimport boundscheck, wraparound
 
 cdef class SumTree:
+    """
+    Sumtree that stores the weights of the transitions.
+    Support fast sampling and updating via tree structure.
+    Support batch operations optimized in C.
+    """
     cdef long capacity
     cdef long write
     cdef double[:] data, tree
