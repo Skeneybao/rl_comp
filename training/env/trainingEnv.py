@@ -259,7 +259,7 @@ class TrainingStockEnv(Game):
             info['full_pos'] = -1
         else:
             info['full_pos'] = 0
-            
+
         observation = {**obs, **info}
         self._last_obs = observation
 
@@ -315,7 +315,8 @@ class TrainingStockEnv(Game):
             ax2.plot(self._net_pnl_accum_path, label='pnl_accum', color='salmon')
             fig.legend(loc='upper left')
             fig.savefig(os.path.join(self.save_metric_path, 'code_metric', f"{self._current_env.date}_{int(code)}.png"))
-
+            plt.close(fig)
+            
     def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
         assert obs_after['code'] == obs_before['code']
         try:
