@@ -1,7 +1,7 @@
 search_space:
   learner_config$lr:
     _type: loguniform
-    _value: [ 1e-7, 1e-3 ]
+    _value: [ 1e-8, 1e-4 ]
   env$reward_fn:
     _type: choice
     _value: [ 'normalized_net_return', 'scaled_net_return' ]
