@@ -11,6 +11,7 @@ from torch import nn
 from training.replay.PRB import PrioritizedReplayBuffer
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.logger import logger
+from training.util.report_running_time import report_time
 from training.util.torch_device import auto_get_device
 
 
@@ -95,6 +96,7 @@ class DQNLearner(Learner):
             raise ValueError(f'Unknown optimizer type: {self.config.optimizer_type}')
         return optimizer
 
+    @report_time(5000)
     def step(self) -> Optional[float]:
         """
         Run a single optimization step of a batch with multiple step reward.

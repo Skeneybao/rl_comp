@@ -13,6 +13,7 @@ from training.model_io.output_wrapper import ModelOutputWrapper
 from training.model_io.featureEngine import FeatureEngine
 from training.env.trainingEnv import TrainingStockEnv
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.util.report_running_time import report_time
 from training.util.validate_action import validate_action
 from training.util.explicit_control import ExplicitControlConf
 
@@ -65,6 +66,7 @@ class Actor:
         self.config = config
         self.explicit_config = explicit_config
 
+    @report_time(100000)
     def step(self):
 
         self.log_states()

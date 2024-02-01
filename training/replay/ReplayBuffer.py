@@ -2,6 +2,8 @@ import random
 from collections import deque
 from typing import Iterable
 
+from training.util.report_running_time import report_time
+
 
 class ReplayBuffer:
     def __init__(self, capacity: int):
@@ -22,6 +24,7 @@ class ReplayBuffer:
         # possibly segmented by a done > 0. That is, one batch can contain multiple episodes.
         return [self.memory[i] for i in range(start_id, start_id + batch_size)]
 
+    @report_time(10000)
     def sample_batched_ordered(self, batch_size: int, batch_length: int) -> Iterable[Iterable]:
         samples = []
         for _ in range(batch_size):
