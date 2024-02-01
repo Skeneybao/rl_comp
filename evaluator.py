@@ -61,6 +61,7 @@ def evaluate_model(config: EvaluatorConfig):
     model_output_wrapper = config.output_wrapper_type(model, device=config.device)
 
     obs, reward, _ = env.reset()
+    rewards = [reward]
 
     while env.reset_cnt <= len(env):
         state = feature_engine.get_feature(obs)
@@ -72,10 +73,11 @@ def evaluate_model(config: EvaluatorConfig):
             obs, reward, _ = env.step(valid_action)
         else:
             obs, reward, _ = env.step((1, 0, 0))
+        rewards.append(reward)
 
     logger.info(f'evaluating model {config.model_name} on {config.date} done.')
 
-    return env.compute_final_stats()
+    return {**env.compute_final_stats(), 'avg_reward': np.mean(rewards)}
 
 
 def log_states(env, obs, feature_engine, state, reward):
