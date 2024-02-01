@@ -9,6 +9,7 @@ from training.model.DNN import DNN
 from training.model_io.featureEngine import FeatureEngineDummy
 from training.model_io.output_wrapper import Action11OutputWrapper
 from training.replay.PRB import PrioritizedReplayBuffer
+from training.util.sumtree import SumTree
 
 
 class ReplayBufferTestCase(unittest.TestCase):
@@ -37,6 +38,26 @@ class ReplayBufferTestCase(unittest.TestCase):
             actor.step()
 
         self.replay_buffer = replay_buffer
+
+    def test_sum_tree(self):
+        t = SumTree(10)
+
+        # add
+        for i in range(10):
+            t.add(i)
+        for i in range(10):
+            self.assertEqual(t[i], i)
+
+        # update
+        for i in range(10):
+            t.update(i, i ** 3)
+        for i in range(10):
+            self.assertEqual(t[i], i ** 3)
+
+        # update batch
+        t.batch_update(np.array(range(10)), np.array([i ** 4 for i in range(10)], dtype=np.float64))
+        for i in range(10):
+            self.assertEqual(t[i], i ** 4)
 
     def test_sample_batched_ordered(self):
         # fetch

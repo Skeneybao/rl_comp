@@ -138,8 +138,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self.weight.update(idx, weight)
 
     def update_weight_batch(self, ids: Iterable[int], weights: Iterable[float]):
-        ids = np.array(ids, dtype=np.int32)
-        weight = np.power(weights, self.alpha) + self.epsilon
+        ids = np.array(ids)
+        weight = np.power(np.array(weights), self.alpha) + self.epsilon
         self.weight.batch_update(ids, weight)
 
     def __len__(self):
