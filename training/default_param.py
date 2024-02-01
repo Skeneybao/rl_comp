@@ -40,4 +40,3 @@ default_param = {
     ## explicit control param
     'signal_risk_thresh': -float('inf'),
 }
-if 
