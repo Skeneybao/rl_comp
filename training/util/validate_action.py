@@ -1,9 +1,11 @@
-from typing import List, Dict
+from typing import Dict
 
 from training.model_io.output_wrapper import ActionType
 
 
-def validate_action(obs: Dict, action: ActionType, max_position:int, signal_risk_thresh:float) -> (ActionType, bool):
+def validate_action(obs: Dict, action: ActionType,
+                    max_position: int = 300,
+                    signal_risk_thresh: float = -float('inf')) -> (ActionType, bool):
     side, vol, price = action
 
     if side == 0 and obs['signal0'] < signal_risk_thresh:

@@ -13,6 +13,7 @@ import pandas as pd
 
 from training.model_io.output_wrapper import ActionType
 from training.util.logger import logger
+from training.util.report_running_time import report_time
 
 CURRENT_PATH = str(Path(__file__).resolve().parent.parent)
 stock_path = os.path.join(CURRENT_PATH, 'env/stock_raw')
@@ -167,6 +168,7 @@ class TrainingStockEnv(Game):
         self._reset_cnt += 1
         return observation, 0, 0
 
+    @report_time(100000)
     def step(self, action: ActionType):
         """
         Action format:

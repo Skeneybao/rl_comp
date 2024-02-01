@@ -1,7 +1,7 @@
 default_param = {
     ## control
     'episode_num': 40_000,
-    'learning_period': 16,
+    'learning_period': 32,
 
     ## env param
     'env$mode': 'ordered',
@@ -13,7 +13,8 @@ default_param = {
     # 'feature_engine$sample_param': '1'
 
     ## replay buffer
-    'replay_buffer$capacity': 100000,
+    'replay_buffer_type': 'PrioritizedReplayBuffer',
+    'replay_buffer$capacity': 10000,
 
     ## model param
     'model_type': 'dnn',
@@ -29,10 +30,10 @@ default_param = {
     'actor_config$eps_decay': 5627937.9401492765,
 
     ## learner config
-    'learner_config$batch_size': 256,
+    'learner_config$batch_size': 512,
     'learner_config$gamma': 0.99,
     'learner_config$tau': 0.005,
-    'learner_config$lr': 1e-7,
+    'learner_config$lr': 1e-4,
     'learner_config$optimizer_type': 'AdamW',
     'learner_config$model_save_step': 20000,
     'learner_config$minimal_buffer_size': 2000,

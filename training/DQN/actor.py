@@ -13,6 +13,7 @@ from training.model_io.output_wrapper import ModelOutputWrapper
 from training.model_io.featureEngine import FeatureEngine
 from training.env.trainingEnv import TrainingStockEnv
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.util.report_running_time import report_time
 from training.util.validate_action import validate_action
 from training.util.explicit_control import ExplicitControlConf
 
@@ -54,7 +55,7 @@ class Actor:
             output_wrapper: ModelOutputWrapper,
             replay_buffer: ReplayBuffer,
             config: ActorConfig,
-            explicit_config: ExplicitControlConf,
+            explicit_config: ExplicitControlConf = ExplicitControlConf(-float('inf')),
     ):
         self.env = env
         self.feature_engine = feature_engine
@@ -65,9 +66,11 @@ class Actor:
         self.config = config
         self.explicit_config = explicit_config
 
+    @report_time(100000)
     def step(self):
 
         self.log_states()
+        warming_up = self.this_obs['warming-up']
         if not self.this_obs['warming-up']:
             if if_epsilon_greedy(self.config, self.env.step_cnt):
                 action, _, model_output = self.output_wrapper.random_action(self.this_obs, self.this_state)
@@ -86,6 +89,7 @@ class Actor:
         self.last_reward = reward
         self.this_obs = next_obs
         self.this_state = next_state
+        return not warming_up
 
     def log_states(self):
         current_code = self.this_obs['code']
