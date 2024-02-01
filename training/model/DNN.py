@@ -109,3 +109,39 @@ class DNN_11_output(nn.Module):
         if no_batch:
             x = x.squeeze(0)
         return x
+
+
+class FullPosDNN(DNN):
+    def __init__(
+            self,
+            *,
+            input_dim: int,
+            hidden_dim: List[int],
+            output_dim: int,
+            activation: str = 'gelu',
+            output_activation: Optional[str] = None,
+            full_signal_pos: int = 0,
+    ):
+        super().__init__(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim,
+                         activation=activation, output_activation=output_activation)
+        self.full_signal_pos = full_signal_pos
+
+    def forward(self, x):
+        original_forward = super().forward(x)
+
+        is_batched = len(original_forward.shape) > 1
+        if not is_batched:
+            x = x.unsqueeze(0)
+            original_forward = original_forward.unsqueeze(0)
+
+        full_signal = x[:, self.full_signal_pos]
+
+        res = torch.zeros_like(original_forward)
+        res[:, 0] = torch.where(full_signal > 0, torch.tensor(-torch.inf), original_forward[:, 0])
+        res[:, 2] = torch.where(full_signal < 0, torch.tensor(-torch.inf), original_forward[:, 2])
+        res[:, 1] = original_forward[:, 1]
+
+        if not is_batched:
+            res = res.squeeze(0)
+
+        return res
