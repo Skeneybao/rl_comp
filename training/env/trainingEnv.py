@@ -147,6 +147,7 @@ class TrainingStockEnv(Game):
         info['signal2_mean'] = 0
         info['mid_price_std'] = 1
         info['warming-up'] = True
+        info['full_pos'] = 0
         observation = {**obs, **info}
         
         self._last_obs = observation
@@ -252,6 +253,13 @@ class TrainingStockEnv(Game):
             info['mid_price_std'] = 1
             info['warming-up'] = True
 
+        if obs['code_net_position'] == self._max_position: 
+            info['full_pos'] = 1
+        elif obs['code_net_position'] == -self._max_position: 
+            info['full_pos'] = -1
+        else:
+            info['full_pos'] = 0
+            
         observation = {**obs, **info}
         self._last_obs = observation
 
