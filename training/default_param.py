@@ -14,7 +14,7 @@ default_param = {
 
     ## replay buffer
     'replay_buffer_type': 'PrioritizedReplayBuffer',
-    'replay_buffer$capacity': 100000,
+    'replay_buffer$capacity': 50000,
 
     ## model param
     'model_type': 'dnn',
