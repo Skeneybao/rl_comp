@@ -208,13 +208,14 @@ class FeatureEngineVersion3(FeatureEngineVersion2):
 class FeatureEngineVersion3_Simple(FeatureEngineVersion3):
 
     def get_input_shape(self):
-        return 16
+        return 17
 
     def get_feature(self, observation) -> torch.Tensor:
 
         mid_price = (observation['ap0'] + observation['bp0']) / 2
 
         feature_tensor = torch.tensor([
+            observation['full_pos'],
             self.relative_time(observation),
             self.price_log(observation),
             self.mid_price_relative(observation),
@@ -239,7 +240,7 @@ class FeatureEngineVersion3_Simple(FeatureEngineVersion3):
 
     @property
     def feature_names(self):
-        return ['time', 'logPrice', 'midPrice', 'rule_des', 'pos', 'sig0', 'sig1', 'sig2', 'sig0_rank', 'sig1_rank', 'sig2_rank',
+        return ['full_pos', 'time', 'logPrice', 'midPrice', 'rule_des', 'pos', 'sig0', 'sig1', 'sig2', 'sig0_rank', 'sig1_rank', 'sig2_rank',
                 'sig0_avg', 'sig1_avg', 'sig2_avg', 'priceStd', 'spread', ] 
 
 FeatureEngineDummy = FeatureEngineVersion1

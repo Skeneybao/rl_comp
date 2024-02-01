@@ -9,7 +9,7 @@ from torch import nn
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN
 from training.model_io.featureEngine import FeatureEngineVersion3_Simple, FeatureEngine
-from training.model_io.output_wrapper import Action3OutputWrapper, ModelOutputWrapper
+from training.model_io.output_wrapper import Action3OutputWrapper, ModelOutputWrapper, RuleOutputWrapper
 from training.reward.rewards import *
 from training.util.explicit_control import ExplicitControlConf
 from training.util.logger import logger
@@ -27,13 +27,18 @@ class EvaluatorConfig:
     output_wrapper_type: Type[ModelOutputWrapper]
     reward_fn: Callable[[int, Dict, Dict, ActionType], float]
     explicit_config: ExplicitControlConf
+    output_path: str = None
     data_path: str = '/home/rl-comp/Git/rl_comp/env/stock_raw/data'
     date: str = 'ALL'
     device: str = 'cpu'
 
 
 def evaluate_model(config: EvaluatorConfig):
-    eval_res_path = os.path.join(config.training_res_path, f"eval_result_{config.model_name}")
+    if config.output_path:
+        eval_res_path = os.path.join(config.output_path, f"eval_result_{config.model_name}")
+    else:
+        eval_res_path = os.path.join(config.training_res_path, f"eval_result_{config.model_name}")
+    
     if not os.path.exists(eval_res_path):
         os.makedirs(eval_res_path)
 
@@ -94,14 +99,16 @@ if __name__ == '__main__':
     config = EvaluatorConfig(
         data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
         date='ALL',
-        training_res_path='/mnt/data3/rl-data/training_res/7u6e3hgm/HkUyH/',
-        model_name='5080000.pt',
+        training_res_path='/mnt/data3/rl-data/training_res/09v4fyat/hHZzr/',
+        output_path='/mnt/data3/rl-data/training_res/09v4fyat/hHZzr/eval_result_7080000.pt',
+        model_name='7080000.pt',
         feature_engine_type=FeatureEngineVersion3_Simple,
         feature_engine_param={'max_position': 10},
         model_type=DNN,
         model_param={'hidden_dim': [32, 32]},
         output_wrapper_type=Action3OutputWrapper,
         reward_fn=normalized_net_return,
+        explicit_config=ExplicitControlConf(signal_risk_thresh=0.5),
     )
 
     res = evaluate_model(config)

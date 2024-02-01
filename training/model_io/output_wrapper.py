@@ -126,7 +126,13 @@ class Action3OutputWrapper(ModelOutputWrapper):
         with torch.no_grad():
             model_output = self.model(model_input.to(self.device))
         # 1. postprocess output
-        action = self.action_id_to_action(model_output.argmax(-1).item(), observation)
+        # if observation['full_pos'] == 1:
+        #     action_id = model_output[..., 1:].argmax(-1).item() + 1
+        # elif observation['full_pos'] == -1:
+        #     action_id = model_output[..., :-1].argmax(-1).item()
+        # else:
+        action_id = model_output.argmax(-1).item()
+        action = self.action_id_to_action(action_id, observation)
 
         self._refresh_count += 1
         if self._refresh_count % self.refresh_model_steps == 0:
@@ -144,6 +150,61 @@ class Action3OutputWrapper(ModelOutputWrapper):
         model_output[action_id] = 1
         return action, model_input, model_output
 
+
+
+class RuleOutputWrapper(ModelOutputWrapper):
+    buy_side = 0
+    noop_side = 1
+    sell_side = 2
+    vol = 1.
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    @staticmethod
+    def get_output_shape():
+        return 3
+
+
+    def select_action(self, observation, model_input: torch.Tensor) -> Tuple[ActionType, torch.tensor, torch.tensor]:
+
+        if observation['eventTime'] > 145500000:
+            return (self.noop_side, 0., 0.), None, None
+        
+        if observation['signal0'] > 0.8:
+            # Long opening
+            price = (observation['ap0'] + observation['bp0']) / 2 * (1 + (observation['signal0'] * 0.0001))
+            if price < observation['ap0']:
+                side = self.noop_side
+                volumn = 0
+                price = 0
+            elif observation['ap0'] <= price:
+                side = self.buy_side
+                volumn = self.vol
+                price = price
+        elif observation['signal0'] < -0.8:
+            # Short opening
+            price = (observation['ap0'] + observation['bp0']) / 2 * (1 + (observation['signal0'] * 0.0001))
+            if price > observation['bp0']:
+                side = self.noop_side
+                volumn = 0
+                price = 0
+            elif observation['bp0'] >= price:
+                side = self.sell_side
+                volumn = self.vol
+                price = price
+        else:
+            side = self.noop_side
+            volumn = 0
+            price = 0
+
+        action = (side, volumn, price) 
+        return action, model_input, None
+
+    def random_action(self, observation, model_input) -> Tuple[ActionType, torch.tensor, torch.tensor]:
+        
+        raise NotImplementedError
+    
 
 def get_output_wrapper(name: str) -> Type[ModelOutputWrapper]:
     if name == 'action11':
