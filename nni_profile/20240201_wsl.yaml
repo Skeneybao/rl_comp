@@ -10,7 +10,7 @@ search_space:
     _value: [ 'PrioritizedReplayBuffer', 'ReplayBuffer' ]
 
 
-trial_command: python run_training_nni.py
+trial_command: OMP_THREAD_LIMIT=4 python run_training_nni.py
 trial_code_directory: ../
 
 trial_concurrency: 2
