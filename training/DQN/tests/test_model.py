@@ -49,7 +49,7 @@ class ModelOutputWrapperTest(unittest.TestCase):
             self.assertEqual(len(action), 3)
             self.assertIn(action[0], [0, 1, 2])
             action_id = model_output.argmax(-1).item()
-            price_key = ['ap4', 'ap3', 'ap2', 'ap1', 'ap0', 'bp0', 'bp1', 'bp2', 'bp3', 'bp4', 'noop'][action_id]
+            price_key = ['ap1', 'noop', 'bp1'][action_id]
             if price_key == 'noop':
                 self.assertEqual(action[0], 1)
                 self.assertEqual(action[1], 0)
