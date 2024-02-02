@@ -136,9 +136,9 @@ class FullPosDNN(DNN):
 
         full_signal = x[:, self.full_signal_pos]
 
-        res = torch.zeros_like(original_forward)
-        res[:, 0] = torch.where(full_signal > 0, torch.tensor(-torch.inf), original_forward[:, 0])
-        res[:, 2] = torch.where(full_signal < 0, torch.tensor(-torch.inf), original_forward[:, 2])
+        res = torch.zeros_like(original_forward, device=original_forward.device)
+        res[:, 0] = torch.where(full_signal > 0, torch.tensor(-torch.inf, device=original_forward.device), original_forward[:, 0])
+        res[:, 2] = torch.where(full_signal < 0, torch.tensor(-torch.inf, device=original_forward.device), original_forward[:, 2])
         res[:, 1] = original_forward[:, 1]
 
         if not is_batched:
