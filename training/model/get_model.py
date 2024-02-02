@@ -11,5 +11,7 @@ def get_model(name: str) -> Type[nn.Module]:
         return DNN_11_output
     elif name == 'attn':
         return Attn
+    elif name == 'full_pos_dnn':
+        return FullPosDNN
     else:
         raise ValueError(f'Unknown model name: {name}')
