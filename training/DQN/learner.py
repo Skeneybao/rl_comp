@@ -31,6 +31,7 @@ class LearnerConfig:
 
     reward_steps: int = 5
     grad_max_norm: float = 1.
+    l2_reg: float = 0.
 
     def __post_init__(self):
         self.lr = float(self.lr)
@@ -165,6 +166,12 @@ class DQNLearner(Learner):
             losses = losses * torch.tensor(loss_weights).unsqueeze(1).to(self.config.device)
             self.replay_buffer.update_weight_batch(sample_indices, losses.detach().flatten().tolist())
         loss = torch.mean(losses)
+
+        if self.config.l2_reg > 0:
+            l2_reg = torch.tensor(0.).to(self.config.device)
+            for param in self.model.parameters():
+                l2_reg += torch.norm(param, p=2)
+            loss += self.config.l2_reg * l2_reg
 
         # optimize
         self.optimizer.zero_grad()
