@@ -17,7 +17,7 @@ default_param = {
     'replay_buffer$capacity': 50000,
 
     ## model param
-    'model_type': 'dnn',
+    'model_type': 'full_pos_dnn',
     'model$hidden_dim': [32, 32],
 
     ## output wrapper param
@@ -33,10 +33,11 @@ default_param = {
     'learner_config$batch_size': 512,
     'learner_config$gamma': 0.99,
     'learner_config$tau': 0.005,
-    'learner_config$lr': 1e-4,
+    'learner_config$lr': 5e-8,
     'learner_config$optimizer_type': 'AdamW',
     'learner_config$model_save_step': 20000,
     'learner_config$minimal_buffer_size': 2000,
+    'learner_config$l2_reg': 0.0,
 
     ## explicit control param
     'signal_risk_thresh': -float('inf'),
