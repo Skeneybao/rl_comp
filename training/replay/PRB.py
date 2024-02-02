@@ -7,6 +7,7 @@ import numba
 import numpy as np
 
 from training.replay.ReplayBuffer import ReplayBuffer
+from training.util.report_running_time import report_time
 from training.util.sumtree import SumTree
 
 
@@ -162,6 +163,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         # return self.async_prefetch(batch_size, self.sample_random_sync)
         return self.sample_random_sync(batch_size)
 
+    @report_time(10000)
     def sample_batched_ordered(
             self, batch_size: int, batch_length: int
     ):
