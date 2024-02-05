@@ -144,7 +144,12 @@ class Action3OutputWrapper(ModelOutputWrapper):
 
         if observation['eventTime'] > 145500000:
             return (self.noop_side, 0., 0.), None, torch.zeros(3, dtype=torch.float)
-        action_id = random.randrange(0, 3)
+        if observation['full_pos'] > 0:
+            action_id = random.randrange(1, 3)
+        elif observation['full_pos'] < 0:
+            action_id = random.randrange(0, 2)
+        else:
+            action_id = random.randrange(0, 3)
         action = self.action_id_to_action(action_id, observation)
         model_output = torch.zeros(3, dtype=torch.float)
         model_output[action_id] = 1
