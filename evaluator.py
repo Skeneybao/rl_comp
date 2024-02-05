@@ -7,7 +7,7 @@ import torch
 from torch import nn
 
 from training.env.trainingEnv import TrainingStockEnv
-from training.model.DNN import DNN
+from training.model.DNN import DNN, FullPosDNN
 from training.model_io.featureEngine import FeatureEngineVersion3_Simple, FeatureEngine
 from training.model_io.output_wrapper import Action3OutputWrapper, ModelOutputWrapper, RuleOutputWrapper
 from training.reward.rewards import *
@@ -67,17 +67,23 @@ def evaluate_model(config: EvaluatorConfig):
 
     obs, reward, _ = env.reset()
     rewards = [reward]
+    action = (1, 0, 0)
+    valid_action = (1, 0 ,0)
+    model_output = torch.zeros(model_output_wrapper.get_output_shape(), dtype=torch.float)
 
     while env.reset_cnt <= len(env):
         state = feature_engine.get_feature(obs)
-        log_states(env, obs, feature_engine, state, reward)
         if not obs['warming-up']:
-            action, _, _ = model_output_wrapper.select_action(obs, state)
+            action, _, model_output = model_output_wrapper.select_action(obs, state)
             valid_action, is_invalid = validate_action(obs, action, max_position=feature_engine.max_position,
                                                        signal_risk_thresh=config.explicit_config.signal_risk_thresh)
-            obs, reward, _ = env.step(valid_action)
         else:
-            obs, reward, _ = env.step((1, 0, 0))
+            action = (1, 0, 0)
+            valid_action = (1, 0 ,0)
+            model_output = torch.zeros(model_output_wrapper.get_output_shape(), dtype=torch.float)
+
+        obs, reward, _ = env.step(valid_action)
+        log_states(env, obs, feature_engine, state, reward, 1 - action[0], 1 - valid_action[0], model_output.numpy().flatten())
         rewards.append(reward)
 
     logger.info(f'evaluating model {config.model_name} on {config.date} done.')
@@ -85,32 +91,33 @@ def evaluate_model(config: EvaluatorConfig):
     return {**env.compute_final_stats(), 'avg_reward': np.mean(rewards)}
 
 
-def log_states(env, obs, feature_engine, state, reward):
+def log_states(env, obs, feature_engine, state, reward, action, valid_action, model_output):
     current_code = obs['code']
     if env.save_code_metric and current_code in env.codes_to_log:
         output_file_path = os.path.join(env.save_metric_path, 'code_metric', f"{env.date}_{current_code}_states.csv")
         file_exists = os.path.exists(output_file_path)
         with open(output_file_path, 'a', newline='') as csvfile:
-            csv_writer = csv.DictWriter(csvfile, fieldnames=feature_engine.feature_names + ['reward'])
+            csv_writer = csv.DictWriter(csvfile, fieldnames=feature_engine.feature_names + ['reward', 'action', 'Vaction'] + [f'Moutputi{i}' for i in range(len(model_output))])
             if not file_exists:
                 csv_writer.writeheader()
-            csv_writer.writerow(dict(zip(feature_engine.feature_names + ['reward'], np.append(state.numpy(), reward))))
+            csv_writer.writerow(dict(zip(feature_engine.feature_names + ['reward', 'action', 'Vaction']+ [f'Moutputi{i}' for i in range(len(model_output))], 
+                            np.append(state.numpy(), [reward, action, valid_action, *model_output]))))
 
 
 if __name__ == '__main__':
     config = EvaluatorConfig(
         data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
         date='ALL',
-        training_res_path='/mnt/data3/rl-data/training_res/09v4fyat/hHZzr/',
-        output_path='/mnt/data3/rl-data/training_res/09v4fyat/hHZzr/eval_result_7080000.pt',
-        model_name='7080000.pt',
+        training_res_path='/mnt/data3/rl-data/training_res/2eqv9onc/mCubU',
+        output_path='/mnt/data3/rl-data/training_res/2eqv9onc/mCubU/eval_result_1180000.pt',
+        model_name='1180000.pt',
         feature_engine_type=FeatureEngineVersion3_Simple,
         feature_engine_param={'max_position': 10},
-        model_type=DNN,
+        model_type=FullPosDNN,
         model_param={'hidden_dim': [32, 32]},
         output_wrapper_type=Action3OutputWrapper,
         reward_fn=normalized_net_return,
-        explicit_config=ExplicitControlConf(signal_risk_thresh=0.5),
+        explicit_config=ExplicitControlConf(signal_risk_thresh=0),
     )
 
     res = evaluate_model(config)

@@ -1,13 +1,14 @@
 import time
 import uuid
 import os
+import torch 
 
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import LearnerConfig, DQNLearner
 from training.model_io.output_wrapper import Action11OutputWrapper, Action3OutputWrapper
 from training.model_io.featureEngine import FeatureEngineVersion3_Simple
 from training.env.trainingEnv import TrainingStockEnv
-from training.model.DNN import DNN
+from training.model.DNN import DNN, FullPosDNN
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.reward.rewards import scaled_net_return
 from training.util.logger import logger
@@ -23,7 +24,7 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(SAVING_PATH, exp_name))
 
     feature_engine = FeatureEngineVersion3_Simple(max_position=10)
-    model = DNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64], output_dim=Action3OutputWrapper.get_output_shape())
+    model = FullPosDNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64], output_dim=Action3OutputWrapper.get_output_shape())
     model_output_wrapper = Action3OutputWrapper(model)
     replay_buffer = ReplayBuffer(10000)
 
@@ -58,6 +59,7 @@ if __name__ == '__main__':
         tau=0.005,
         lr=1e-5,
         optimizer_type='SGD',
+        device=torch.device('cpu'),
         #model_save_prefix=SAVING_PATH,
         model_save_step=20000,
     )
