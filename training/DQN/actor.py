@@ -16,6 +16,8 @@ from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.report_running_time import report_time
 from training.util.validate_action import validate_action
 from training.util.explicit_control import ExplicitControlConf
+from training.util.logger import log_states
+
 
 @dataclass
 class ActorConfig:
@@ -68,8 +70,6 @@ class Actor:
 
     @report_time(100000)
     def step(self):
-
-        self.log_states()
         warming_up = self.this_obs['warming-up']
         if not self.this_obs['warming-up']:
             if if_epsilon_greedy(self.config, self.env.step_cnt):
@@ -83,21 +83,14 @@ class Actor:
             if not self.this_obs['eventTime'] > 145500000:
                 self.replay_buffer.push([self.this_state, model_output, reward, next_state, done])
         else:
-            next_obs, reward, done = self.env.step((1, 0, 0))
+            action = (1, 0, 0)
+            valid_action = (1, 0 ,0)
+            model_output = torch.zeros(self.output_wrapper.get_output_shape(), dtype=torch.float)
+            next_obs, reward, done = self.env.step(valid_action)
             next_state = self.feature_engine.get_feature(next_obs)
-        
+        log_states(self.env, self.this_obs, self.feature_engine, self.this_state, reward, 1 - action[0], 1 - valid_action[0], model_output.numpy().flatten())
+
         self.last_reward = reward
         self.this_obs = next_obs
         self.this_state = next_state
         return not warming_up
-
-    def log_states(self):
-        current_code = self.this_obs['code']
-        if self.env.save_code_metric and current_code in self.env.codes_to_log:
-            output_file_path = os.path.join(self.env.save_metric_path, 'code_metric',f"{self.env.date}_{current_code}_states.csv")
-            file_exists = os.path.exists(output_file_path)
-            with open(output_file_path, 'a', newline='') as csvfile:
-                csv_writer = csv.DictWriter(csvfile, fieldnames=self.feature_engine.feature_names + ['reward'])
-                if not file_exists:
-                    csv_writer.writeheader()
-                csv_writer.writerow(dict(zip(self.feature_engine.feature_names + ['reward'], np.append(self.this_state.numpy(), self.last_reward))))

@@ -120,7 +120,7 @@ class Action3OutputWrapper(ModelOutputWrapper):
     def select_action(self, observation, model_input: torch.Tensor) -> Tuple[ActionType, torch.tensor, torch.tensor]:
 
         if observation['eventTime'] > 145500000:
-            return (self.noop_side, 0., 0.), None, None
+            return (self.noop_side, 0., 0.), None, torch.zeros(3, dtype=torch.float)
 
         # 0. inference
         with torch.no_grad():
@@ -143,7 +143,7 @@ class Action3OutputWrapper(ModelOutputWrapper):
     def random_action(self, observation, model_input) -> Tuple[ActionType, torch.tensor, torch.tensor]:
 
         if observation['eventTime'] > 145500000:
-            return (self.noop_side, 0., 0.), None, None
+            return (self.noop_side, 0., 0.), None, torch.zeros(3, dtype=torch.float)
         if observation['full_pos'] > 0:
             action_id = random.randrange(1, 3)
         elif observation['full_pos'] < 0:
@@ -174,7 +174,7 @@ class RuleOutputWrapper(ModelOutputWrapper):
     def select_action(self, observation, model_input: torch.Tensor) -> Tuple[ActionType, torch.tensor, torch.tensor]:
 
         if observation['eventTime'] > 145500000:
-            return (self.noop_side, 0., 0.), None, None
+            return (self.noop_side, 0., 0.), None, torch.zeros(3, dtype=torch.float)
         
         if observation['signal0'] > 0.8:
             # Long opening
