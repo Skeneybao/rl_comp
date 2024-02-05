@@ -12,7 +12,7 @@ from training.model_io.featureEngine import FeatureEngineVersion3_Simple, Featur
 from training.model_io.output_wrapper import Action3OutputWrapper, ModelOutputWrapper, RuleOutputWrapper
 from training.reward.rewards import *
 from training.util.explicit_control import ExplicitControlConf
-from training.util.logger import logger
+from training.util.logger import logger, log_states
 from training.util.validate_action import validate_action
 
 
@@ -89,19 +89,6 @@ def evaluate_model(config: EvaluatorConfig):
     logger.info(f'evaluating model {config.model_name} on {config.date} done.')
 
     return {**env.compute_final_stats(), 'avg_reward': np.mean(rewards)}
-
-
-def log_states(env, obs, feature_engine, state, reward, action, valid_action, model_output):
-    current_code = obs['code']
-    if env.save_code_metric and current_code in env.codes_to_log:
-        output_file_path = os.path.join(env.save_metric_path, 'code_metric', f"{env.date}_{current_code}_states.csv")
-        file_exists = os.path.exists(output_file_path)
-        with open(output_file_path, 'a', newline='') as csvfile:
-            csv_writer = csv.DictWriter(csvfile, fieldnames=feature_engine.feature_names + ['reward', 'action', 'Vaction'] + [f'Moutputi{i}' for i in range(len(model_output))])
-            if not file_exists:
-                csv_writer.writeheader()
-            csv_writer.writerow(dict(zip(feature_engine.feature_names + ['reward', 'action', 'Vaction']+ [f'Moutputi{i}' for i in range(len(model_output))], 
-                            np.append(state.numpy(), [reward, action, valid_action, *model_output]))))
 
 
 if __name__ == '__main__':
