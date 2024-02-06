@@ -88,7 +88,7 @@ class Actor:
             model_output = torch.zeros(self.output_wrapper.get_output_shape(), dtype=torch.float)
             next_obs, reward, done = self.env.step(valid_action)
             next_state = self.feature_engine.get_feature(next_obs)
-        log_states(self.env, self.this_obs, self.feature_engine, self.this_state, reward, 1 - action[0], 1 - valid_action[0], model_output.numpy().flatten())
+        log_states(self.env, self.this_obs, self.feature_engine, self.this_state, reward, np.argmax(action), np.argmax(valid_action), model_output.numpy().flatten())
 
         self.last_reward = reward
         self.this_obs = next_obs
