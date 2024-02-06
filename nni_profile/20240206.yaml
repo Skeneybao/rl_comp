@@ -14,7 +14,7 @@ search_space:
 trial_command: OMP_THREAD_LIMIT=4 python run_training_nni.py
 trial_code_directory: ../
 
-trial_concurrency: 2
+trial_concurrency: 4
 max_trial_number: 100
 
 tuner:
