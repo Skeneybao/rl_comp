@@ -18,7 +18,7 @@ default_param = {
 
     ## model param
     'model_type': 'full_pos_dnn',
-    'model$hidden_dim': [32, 32, 32, 32],
+    'model$hidden_dim': [32, 32, 32],
 
     ## output wrapper param
     'output_wrapper_type': 'action3',
