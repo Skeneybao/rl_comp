@@ -5,7 +5,7 @@ default_param = {
 
     ## env param
     'env$mode': 'ordered',
-    'env$reward_fn': 'normalized_net_return',
+    'env$reward_fn': 'scaled_net_return',
 
     ## feature engine param
     'feature_engine_type': 'version3Simple',
@@ -18,7 +18,7 @@ default_param = {
 
     ## model param
     'model_type': 'full_pos_dnn',
-    'model$hidden_dim': [32, 32],
+    'model$hidden_dim': [32, 32, 32, 32],
 
     ## output wrapper param
     'output_wrapper_type': 'action3',
