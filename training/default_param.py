@@ -13,12 +13,12 @@ default_param = {
     # 'feature_engine$sample_param': '1'
 
     ## replay buffer
-    'replay_buffer_type': 'PrioritizedReplayBuffer',
+    'replay_buffer_type': 'ReplayBuffer',
     'replay_buffer$capacity': 50000,
 
     ## model param
-    'model_type': 'full_pos_dnn',
-    'model$hidden_dim': [32, 32],
+    'model_type': 'dnn',
+    'model$hidden_dim': [16, 16, 16],
 
     ## output wrapper param
     'output_wrapper_type': 'action3',
