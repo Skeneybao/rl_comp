@@ -16,5 +16,7 @@ def get_feature_engine_type(name: str) -> Type[FeatureEngine]:
         return FeatureEngineVersion3
     elif name == 'version3Simple':
         return FeatureEngineVersion3_Simple
+    elif name == 'version4':
+        return FeatureEngineVersion4
     else:
         raise ValueError(f'Unknown feature engine name: {name}')
