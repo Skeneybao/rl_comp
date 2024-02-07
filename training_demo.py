@@ -10,7 +10,7 @@ from training.model_io.featureEngine import FeatureEngineVersion3_Simple
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN, FullPosDNN
 from training.replay.ReplayBuffer import ReplayBuffer
-from training.reward.rewards import scaled_net_return
+from training.reward.rewards import scaled_net_return, single_trade_return600TWAP
 from training.util.logger import logger
 from training.util.explicit_control import ExplicitControlConf
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     
     env = TrainingStockEnv(
         mode='ordered',
-        reward_fn=scaled_net_return,
+        reward_fn=single_trade_return600TWAP,
         save_metric_path=os.path.join(SAVING_PATH, exp_name),
         save_code_metric=True, 
         max_postion=feature_engine.max_position)

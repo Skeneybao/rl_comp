@@ -80,7 +80,7 @@ class Actor:
             valid_action, is_invalid = validate_action(self.this_obs, action, max_position=self.feature_engine.max_position, signal_risk_thresh=self.explicit_config.signal_risk_thresh)
             next_obs, reward, done = self.env.step(valid_action)
             next_state = self.feature_engine.get_feature(next_obs)
-            if not self.this_obs['eventTime'] > 145500000:
+            if not self.this_obs['eventTime'] > 144700000:
                 self.replay_buffer.push([self.this_state, model_output, reward, next_state, done])
         else:
             action = (1, 0, 0)

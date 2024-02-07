@@ -2,6 +2,7 @@ import csv
 import os
 import random
 import sys
+import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict
@@ -104,6 +105,8 @@ class TrainingStockEnv(Game):
             self._dateIter = OrderedIterator(dateList)
 
         self.codes_to_log = CODE_TO_PLOT
+        self._current_date_data_df = None
+        self._current_code_data_df = None
         self._max_position = max_postion
         self._code_pos_path = []
         self._code_price_path = []
@@ -130,15 +133,23 @@ class TrainingStockEnv(Game):
         self._parquetFile.load()
 
         data_df = self._parquetFile.data
-        data_df['rand'] =  data_df['code'] % np.random.randn()
-        data_df = data_df.sort_values(by=['rand', 'eventTime'])
-        del data_df['rand']
-        code_list = [float(item) for item in data_df['code'].unique()]
 
-        mock_market_data = MockMarketDataCython(np.array(data_df))
+        current_date_data_df = copy.deepcopy(data_df)
+        current_date_data_df.loc[:, 'midPrice'] = (current_date_data_df['bidPx1'] + current_date_data_df['askPx1'] ) / 2
+        current_date_data_df = current_date_data_df.groupby('code').apply(addCols).reset_index(drop=True)
+
+        current_date_data_df['rand'] =  current_date_data_df['code'] % np.random.randn()
+        current_date_data_df = current_date_data_df.sort_values(by=['rand', 'eventTime'])
+        del current_date_data_df['rand']
+        code_list = [float(item) for item in current_date_data_df['code'].unique()]
+
+        mock_market_data = MockMarketDataCython(np.array(current_date_data_df))
         self._current_env = StockBaseEnvCython(date, code_list, mock_market_data)
 
         obs, done, info = self._current_env.reset()
+        self._current_date_data_df = current_date_data_df
+        self._current_code_data_df = self._current_date_data_df[self._current_date_data_df['code'] == obs['code']].set_index('eventTime')
+ 
         info['signal0_rank'] = 0.5
         info['signal1_rank'] = 0.5
         info['signal2_rank'] = 0.5
@@ -148,6 +159,7 @@ class TrainingStockEnv(Game):
         info['mid_price_std'] = 1
         info['warming-up'] = True
         info['full_pos'] = 0
+        info['TWAP600'] = self._current_code_data_df.loc[obs['eventTime'], 'TWAP600']
         observation = {**obs, **info}
         
         self._last_obs = observation
@@ -190,11 +202,13 @@ class TrainingStockEnv(Game):
         # this episode.
         # However, based on the handling of done in the following code, the returned observation is the first one of
         # the next episode, so we use the last observation of the current episode here to calculate the reward.
+        twaps = self._current_code_data_df.loc[obs['eventTime'], ['TWAP90', 'TWAP600']]
         reward = self.get_reward(
-            self._step_cnt - self._step_cnt_except_this_episode,
-            self._last_obs,
-            {**obs, **info},
-            action,
+            step_this_episode=self._step_cnt - self._step_cnt_except_this_episode,
+            obs_before=self._last_obs,
+            obs_after={**obs, **info},
+            action=action,
+            **twaps,
         )
         # Record all signal values for current code
         self.info_acc.log((obs['ap0'] + obs['bp0']) / 2, obs['signal0'], obs['signal1'], obs['signal2'], reward)
@@ -253,6 +267,7 @@ class TrainingStockEnv(Game):
             info['mid_price_std'] = 1
             info['warming-up'] = True
 
+        info['TWAP600'] = self._current_code_data_df.loc[obs['eventTime'], 'TWAP600']
         if obs['code_net_position'] == self._max_position: 
             info['full_pos'] = 1
         elif obs['code_net_position'] == -self._max_position: 
@@ -293,6 +308,7 @@ class TrainingStockEnv(Game):
             self._deal_code_plot(obs['code'])
 
         obs, _, info = self._current_env.reset()
+        self._current_code_data_df = self._current_date_data_df[self._current_date_data_df['code'] == obs['code']].set_index('eventTime')
         self._step_cnt_except_this_episode = self._step_cnt
         self._episode_cnt += 1
 
@@ -317,10 +333,10 @@ class TrainingStockEnv(Game):
             fig.savefig(os.path.join(self.save_metric_path, 'code_metric', f"{self._current_env.date}_{int(code)}.png"))
             plt.close(fig)
             
-    def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+    def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType, *args, **kwargs) -> float:
         assert obs_after['code'] == obs_before['code']
         try:
-            return self.reward_fn(step_this_episode, obs_before, obs_after, action)
+            return self.reward_fn(step_this_episode, obs_before, obs_after, action, *args, **kwargs)
         except ValueError as e:
             raise ValueError(f'Error in get_reward, step_this_episode: {step_this_episode}, '
                              f'obs_before: {obs_before}, obs_after: {obs_after}, action: {action}') from e
@@ -424,3 +440,17 @@ class OrderedIterator:
 
     def __len__(self):
         return len(self.data)
+
+def addCols(subdf):
+    subdf['TWAP90'] = subdf[['midPrice']].rolling(15).mean().shift(-15)
+    subdf['PL90'] = subdf[['midPrice']].shift(-15)
+    subdf['TWAP600'] = subdf[['midPrice']].rolling(120).mean().shift(-120)
+    subdf['PL600'] = subdf[['midPrice']].shift(-120)
+
+    subdf['Earn90'] = subdf['TWAP90'] / subdf['midPrice'] - 1
+    subdf['Earn600'] = subdf['TWAP600'] / subdf['midPrice'] - 1
+    subdf['Earn90P'] = subdf['PL90'] / subdf['midPrice'] - 1
+    subdf['Earn600P'] = subdf['PL600'] / subdf['midPrice'] - 1
+    subdf = subdf.iloc[:-120]
+    return subdf
+

@@ -8,7 +8,7 @@ from training.util.tools import get_price_avg, log1p_abs
 
 
 @register_reward('normalized_net_return')
-def normalized_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+def normalized_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, *args, **kwargs) -> float:
     """
     calculate reward by normalized net return
 
@@ -47,7 +47,7 @@ def normalized_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, ac
 
 
 @register_reward('scaled_net_return')
-def scaled_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, scale=35e-4):
+def scaled_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, scale=35e-4, *args, **kwargs):
     
     side, vol, price = action
 
@@ -65,9 +65,36 @@ def scaled_net_return(steps_done: int, obs_before: Dict, obs_after: Dict, action
     return net_pos * scaled_return - add_on_handling_fee - take_fee
 
 
+@register_reward('single600T')
+def single_trade_return600TWAP(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, TWAP600: float, *args, **kwargs) -> float:
+    
+    side, vol, price = action
+    if side == 1:
+        return 0
+    elif side == 0:
+        Earn600 = (TWAP600 - obs_before['ap0']) / obs_before['ap0']
+    elif side == 2:
+        Earn600 = (obs_before['bp0'] - TWAP600) / obs_before['bp0']
+    return Earn600
+
+
+@register_reward('single600T_scaled')
+def single_trade_return600TWAP_scaled(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, TWAP600: float, scale=100e-4, *args, **kwargs) -> float:
+    
+    side, vol, price = action
+    if side == 1:
+        return 0
+    elif side == 0:
+        Earn600 = (TWAP600 - obs_before['ap0']) / obs_before['ap0']
+    elif side == 2:
+        Earn600 = (obs_before['bp0'] - TWAP600) / obs_before['bp0']
+
+    Earn600Scaled = np.arctan(Earn600 / scale) * scale
+    return Earn600Scaled
+
 
 @register_reward('short_sight_return')
-def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, *args, **kwargs) -> float:
     # Here we assume 'vol' can be traded given the 'price'
     side, vol, price = action
 
@@ -91,7 +118,7 @@ def short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, actio
 
 
 @register_reward('long_short_sight_return')
-def long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, divd=10) -> float:
+def long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, divd=10, *args, **kwargs) -> float:
     long_sight_reward = normalized_net_return(steps_done, obs_before, obs_after, action)
     short_sight_reward = short_sight_return(steps_done, obs_before, obs_after, action)
 
@@ -99,8 +126,10 @@ def long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, 
 
 
 @register_reward('log_long_short_sight_return')
-def log_long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType) -> float:
+def log_long_short_sight_return(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, *args, **kwargs) -> float:
     long_sight_reward = normalized_net_return(steps_done, obs_before, obs_after, action)
     short_sight_reward = short_sight_return(steps_done, obs_before, obs_after, action)
 
     return log1p_abs(long_sight_reward) + log1p_abs(short_sight_reward)
+
+
