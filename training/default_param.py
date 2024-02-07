@@ -8,7 +8,7 @@ default_param = {
     'env$reward_fn': 'normalized_net_return',
 
     ## feature engine param
-    'feature_engine_type': 'version3Simple',
+    'feature_engine_type': 'version4',
     'feature_engine$max_position': 10,
     # 'feature_engine$sample_param': '1'
 
