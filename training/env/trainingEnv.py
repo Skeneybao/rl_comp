@@ -202,7 +202,7 @@ class TrainingStockEnv(Game):
         # this episode.
         # However, based on the handling of done in the following code, the returned observation is the first one of
         # the next episode, so we use the last observation of the current episode here to calculate the reward.
-        twaps = self._current_code_data_df.loc[obs['eventTime'], ['TWAP90', 'TWAP600']]
+        twaps = self._current_code_data_df.loc[obs['eventTime'], ['TWAP600']]
         reward = self.get_reward(
             step_this_episode=self._step_cnt - self._step_cnt_except_this_episode,
             obs_before=self._last_obs,
@@ -442,8 +442,8 @@ class OrderedIterator:
         return len(self.data)
 
 def addCols(subdf):
-    subdf['TWAP90'] = subdf[['midPrice']].rolling(15).mean().shift(-15)
-    subdf['PL90'] = subdf[['midPrice']].shift(-15)
+    # subdf['TWAP90'] = subdf[['midPrice']].rolling(15).mean().shift(-15)
+    # subdf['PL90'] = subdf[['midPrice']].shift(-15)
     subdf['TWAP600'] = subdf[['midPrice']].rolling(120).mean().shift(-120)
     subdf['PL600'] = subdf[['midPrice']].shift(-120)
 
