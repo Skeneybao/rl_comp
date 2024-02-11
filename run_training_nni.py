@@ -40,22 +40,6 @@ if __name__ == '__main__':
         # recursively remove
         os.system('rm -rf /mnt/data3/rl-data/training_res/STANDALONE/STANDALONE')
 
-    # Gen exp info & metadata
-    #################################
-    # init exp
-    #################################
-    exp_info = get_exp_info()
-    exp_name = f'{exp_info.nni_exp_id}/{exp_info.nni_trial_id}'
-
-    saving_path = os.path.join(SAVING_PREFIX, exp_info.nni_exp_id, exp_info.nni_trial_id)
-    os.makedirs(saving_path)
-    with open(os.path.join(saving_path, 'exp_info.txt'), 'w') as f:
-        f.write(f'nni_exp_id: {exp_info.nni_exp_id}\n')
-        f.write(f'nni_trial_id: {exp_info.nni_trial_id}\n')
-        f.write(f'git_branch: {exp_info.git_branch}\n')
-        f.write(f'git_commit: {exp_info.git_commit}\n')
-        f.write(f'git_clean: {exp_info.git_clean}\n')
-
     #################################
     # set object's param on nni's next parameters
     #################################
@@ -72,6 +56,22 @@ if __name__ == '__main__':
      learner_config,
      explicit_config,
      ) = get_param_from_nni()
+
+    # Gen exp info & metadata
+    #################################
+    # init exp
+    #################################
+    exp_info = get_exp_info()
+    exp_name = f'{exp_info.nni_exp_id}/{exp_info.nni_trial_id}'
+
+    saving_path = os.path.join(SAVING_PREFIX, exp_info.nni_exp_id, exp_info.nni_trial_id)
+    os.makedirs(saving_path)
+    with open(os.path.join(saving_path, 'exp_info.txt'), 'w') as f:
+        f.write(f'nni_exp_id: {exp_info.nni_exp_id}\n')
+        f.write(f'nni_trial_id: {exp_info.nni_trial_id}\n')
+        f.write(f'git_branch: {exp_info.git_branch}\n')
+        f.write(f'git_commit: {exp_info.git_commit}\n')
+        f.write(f'git_clean: {exp_info.git_clean}\n')
 
     # init
     feature_engine = feature_engine_type(**feature_engine_param)
