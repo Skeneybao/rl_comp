@@ -447,7 +447,7 @@ def addCols(subdf):
     subdf['TWAP600'] = subdf[['midPrice']].rolling(120).mean().shift(-120)
     subdf['PL600'] = subdf[['midPrice']].shift(-120)
 
-    subdf['Earn90'] = subdf['TWAP90'] / subdf['midPrice'] - 1
+    # subdf['Earn90'] = subdf['TWAP90'] / subdf['midPrice'] - 1
     subdf['Earn600'] = subdf['TWAP600'] / subdf['midPrice'] - 1
     subdf['Earn90P'] = subdf['PL90'] / subdf['midPrice'] - 1
     subdf['Earn600P'] = subdf['PL600'] / subdf['midPrice'] - 1
