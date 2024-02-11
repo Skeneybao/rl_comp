@@ -89,13 +89,13 @@ class DQNLearner(Learner):
 
     def __get_optimizer(self):
         if self.config.optimizer_type == 'AdamW':
-            optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
+            optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr, weight_decay=self.config.l2_reg)
         elif self.config.optimizer_type == 'Adam':
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.lr)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.lr, weight_decay=self.config.l2_reg)
         elif self.config.optimizer_type == 'SGD':
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config.lr)
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config.lr, weight_decay=self.config.l2_reg)
         elif self.config.optimizer_type == 'RMSprop':
-            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.config.lr)
+            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.config.lr, weight_decay=self.config.l2_reg)
         else:
             raise ValueError(f'Unknown optimizer type: {self.config.optimizer_type}')
         return optimizer
@@ -167,12 +167,6 @@ class DQNLearner(Learner):
             losses = losses * torch.tensor(loss_weights).unsqueeze(1).to(self.config.device)
             self.replay_buffer.update_weight_batch(sample_indices, losses.detach().flatten().tolist())
         loss = torch.mean(losses)
-
-        if self.config.l2_reg > 0:
-            l2_reg = torch.tensor(0.).to(self.config.device)
-            for param in self.model.parameters():
-                l2_reg += torch.norm(param, p=2)
-            loss += self.config.l2_reg * l2_reg
 
         # optimize
         self.optimizer.zero_grad()
