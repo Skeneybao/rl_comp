@@ -11,6 +11,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from line_profiler import profile
 
 from training.model_io.output_wrapper import ActionType
 from training.util.logger import logger
@@ -182,6 +183,7 @@ class TrainingStockEnv(Game):
         return observation, 0, 0
 
     @report_time(100000)
+    @profile
     def step(self, action: ActionType):
         """
         Action format:
@@ -202,7 +204,7 @@ class TrainingStockEnv(Game):
         # this episode.
         # However, based on the handling of done in the following code, the returned observation is the first one of
         # the next episode, so we use the last observation of the current episode here to calculate the reward.
-        twaps = self._current_code_data_df.loc[obs['eventTime'], ['TWAP600']]
+        twaps = {'TWAP600': self._current_code_data_df.loc[obs['eventTime'], 'TWAP600']}
         reward = self.get_reward(
             step_this_episode=self._step_cnt - self._step_cnt_except_this_episode,
             obs_before=self._last_obs,
