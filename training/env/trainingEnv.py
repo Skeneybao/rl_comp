@@ -449,7 +449,7 @@ def addCols(subdf):
 
     # subdf['Earn90'] = subdf['TWAP90'] / subdf['midPrice'] - 1
     subdf['Earn600'] = subdf['TWAP600'] / subdf['midPrice'] - 1
-    subdf['Earn90P'] = subdf['PL90'] / subdf['midPrice'] - 1
+    # subdf['Earn90P'] = subdf['PL90'] / subdf['midPrice'] - 1
     subdf['Earn600P'] = subdf['PL600'] / subdf['midPrice'] - 1
     subdf = subdf.iloc[:-120]
     return subdf
