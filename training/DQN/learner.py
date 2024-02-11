@@ -33,6 +33,9 @@ class LearnerConfig:
     grad_max_norm: float = 1.
     l2_reg: float = 0.
 
+    qrdqn: bool = False
+    kappa: float = 1.0
+
     def __post_init__(self):
         self.lr = float(self.lr)
         self.l2_reg = float(self.l2_reg)
@@ -102,6 +105,12 @@ class DQNLearner(Learner):
 
     @report_time(5000)
     def step(self) -> Optional[float]:
+        if self.config.qrdqn:
+            return self.step_qrdqn()
+        else:
+            return self.step_dqn()
+
+    def step_dqn(self) -> Optional[float]:
         """
         Run a single optimization step of a batch with multiple step reward.
         """
@@ -167,6 +176,118 @@ class DQNLearner(Learner):
             losses = losses * torch.tensor(loss_weights).unsqueeze(1).to(self.config.device)
             self.replay_buffer.update_weight_batch(sample_indices, losses.detach().flatten().tolist())
         loss = torch.mean(losses)
+
+        # optimize
+        self.optimizer.zero_grad()
+        loss.backward()
+        # grad clipping
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_max_norm)
+        self.optimizer.step()
+
+        self.step_cnt += 1
+
+        if self.saving and self.step_cnt % self.config.model_save_step == 0:
+            path = os.path.join(self.model_saving_path, f'{self.step_cnt}.pt')
+            logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
+            self.save_model(path, self.model, self.optimizer)
+            self.latest_model_num = self.step_cnt
+
+        if self.step_cnt % self.config.update_target_model_step == 0:
+            self.update_target_model()
+
+        return loss.item()
+
+
+    def step_qrdqn(self) -> Optional[float]:
+        """
+        Run a single optimization step of a batch with multiple step reward.
+        """
+        if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
+            return None
+
+        if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
+            sequences, sample_indices, loss_weights = self.replay_buffer.sample_batched_ordered_sync(
+                int(self.config.batch_size),
+                int(self.config.reward_steps))
+        else:
+            sequences = self.replay_buffer.sample_batched_ordered(int(self.config.batch_size),
+                                                                  int(self.config.reward_steps))
+        # Prepare batches
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch, discount_batch = (
+            [], [], [], [], [], [])
+        for sequence in sequences:
+            # Initialize variables for n-step calculations
+            accum_reward = 0.0
+            discount = 1.0
+            final_state = sequence[-1][3]  # The next state after n steps
+            done = False
+
+            # Accumulate reward over n steps
+            for transition in sequence:
+                state, model_output, reward, _, done = transition
+                accum_reward += discount * reward
+                discount *= self.config.gamma
+                if done:
+                    final_state = transition[3]  # If done, use the terminal state
+                    break
+
+            state_batch.append(state)
+            action_batch.append(model_output)
+            reward_batch.append(accum_reward)
+            next_state_batch.append(final_state)
+            done_batch.append(done)
+            discount_batch.append(discount)
+
+        state_batch = torch.stack(state_batch).to(self.config.device)
+        action_batch = torch.stack(action_batch).mean(-1).argmax(1).unsqueeze(1).to(self.config.device)
+        reward_batch = torch.tensor(reward_batch).to(self.config.device)
+        next_state_batch = torch.stack(next_state_batch).to(self.config.device)
+        done_batch = torch.tensor(done_batch).to(self.config.device)
+        discount_batch = torch.tensor(discount_batch).to(self.config.device)
+
+        non_final_mask = done_batch == 0
+        non_final_next_states = next_state_batch[non_final_mask]
+
+        # Predict the quantile values for the current states and actions
+        current_quantiles = self.model(state_batch)
+        action_batch = action_batch.long()
+        current_action_quantiles = current_quantiles.gather(1, action_batch.repeat(1, self.model.quant_dim)
+                                                            .unsqueeze(-1)).squeeze(-1)
+
+        # Predict the next state quantile values
+        with torch.no_grad():
+            next_state_quantiles = self.target_model(non_final_next_states)
+            # Double DQN update: use the model to select actions in next states
+            next_state_actions = self.model(non_final_next_states).mean(dim=2).max(1)[1].unsqueeze(1).unsqueeze(1)
+            next_state_actions = next_state_actions.repeat(1, 1, self.model.quant_dim)
+            # Select the quantile values for the actions chosen by the model
+            next_quantiles = next_state_quantiles.gather(1, next_state_actions).squeeze(1)
+
+        # Calculate expected quantile values for non-final next states
+        expected_quantiles = torch.zeros(state_batch.size(0), self.model.quant_dim).to(self.config.device)
+        expected_quantiles[non_final_mask] = next_quantiles
+
+        # Calculate target quantile values
+        target_quantile_values = (reward_batch.unsqueeze(1) +
+                                  discount_batch.unsqueeze(1) * expected_quantiles * (~done_batch).unsqueeze(1))
+
+        # Calculate quantile regression loss
+        td_error = target_quantile_values - current_action_quantiles
+        abs_td_error = td_error.abs()
+        huber_loss = torch.where(abs_td_error <= self.config.kappa,
+                                 0.5 * td_error.pow(2),
+                                 self.config.kappa * (abs_td_error - 0.5 * self.config.kappa))
+        quantile_loss = torch.abs(
+            (torch.arange(self.model.quant_dim, device=self.config.device, dtype=torch.float) + 0.5).unsqueeze(0)
+            - (td_error.detach() < 0).float()) * huber_loss / self.config.kappa
+        loss = quantile_loss.mean()
+
+        if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
+            # Update priorities
+            new_priorities = abs_td_error.detach().sum(dim=1).cpu().numpy()
+            self.replay_buffer.update_weight_batch(sample_indices, new_priorities)
+            # Weighted loss for prioritized replay
+            loss = (loss_weights.to(self.config.device) * quantile_loss).mean()
 
         # optimize
         self.optimizer.zero_grad()
