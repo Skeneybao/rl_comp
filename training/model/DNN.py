@@ -1,19 +1,9 @@
-from dataclasses import dataclass
 from typing import List, Optional
 
 import torch
 from torch import nn
 
 from training.model.activations import activations
-
-
-@dataclass
-class DNNModelConfig:
-    input_dim: int
-    hidden_dim: List[int]
-    output_dim: int
-    activation: str = 'gelu'
-    output_activation: Optional[str] = None
 
 
 class DNN(nn.Module):
