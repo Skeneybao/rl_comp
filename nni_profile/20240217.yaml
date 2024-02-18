@@ -1,7 +1,7 @@
 search_space:
   learner_config$lr:
     _type: loguniform
-    _value: [ 1e-7, 1e-6 ]
+    _value: [ 1e-7, 1e-5 ]
   learner_config$l2_reg:
     _type: choice
     _value: [ 0.0, 1e-7, 1e-6, 1e-5, 1e-4 ]
