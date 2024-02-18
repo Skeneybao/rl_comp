@@ -136,6 +136,8 @@ def get_param_from_nni() -> Tuple[
         if output_wrapper_type == Action3OutputWrapper:
             logger.info("Auto change output wrapper type from Action3OutputWrapper to Action3OutputQuantileWrapper")
             output_wrapper_type = Action3OutputQuantileWrapper
+        params['learner_config$lr'] = 100 * params['learner_config$lr']
+        logger.info(f"Auto change learning rate from {params['learner_config$lr'] / 1000} to {params['learner_config$lr']}")
 
     return (control_param,
             env_param,
