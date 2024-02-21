@@ -10,7 +10,7 @@ from training.model.DNN import *
 from training.util.validate_action import validate_action
 from training.util.explicit_control import ExplicitControlConf
 
-max_position = 100
+max_position = 300
 
 feature_engine = FeatureEngineVersion4(max_position=max_position)
 model = DNN(
@@ -32,7 +32,12 @@ def my_controller(observation, action_space, is_act_continuous=False):
         env_info_appender.reset()
     state = feature_engine.get_feature(obs)
     action, _, _ = model_output_wrapper.select_action(obs, state)
-    (sd, vol, price), is_invalid = validate_action(obs, action, max_position=feature_engine.max_position,
+    sd, vol, price = action
+    if sd == 0:
+        vol = obs['av0']
+    elif sd == 2:
+        vol = obs['bv0']
+    (sd, vol, price), is_invalid = validate_action(obs, (sd, vol, price), max_position=feature_engine.max_position,
                                                    signal_risk_thresh=explicit_config.signal_risk_thresh)
     if sd == 0:
         side = [1, 0, 0]
