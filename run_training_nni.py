@@ -9,8 +9,6 @@ from evaluator import EvaluatorConfig, evaluate_model
 from training.DQN.actor import Actor, cal_epsilon
 from training.DQN.learner import DQNLearner
 from training.env.trainingEnv import TrainingStockEnv
-from training.replay.PRB import PrioritizedReplayBuffer
-from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.exp_management import get_exp_info, get_param_from_nni
 from training.util.logger import logger
 
@@ -20,7 +18,7 @@ multiprocessing.set_start_method('spawn', force=True)
 DEFAULT_METRIC_KEY = 'daily_pnl_mean_sharped'
 
 # second_best or best
-FINAL_METRIC_STRATEGY = 'rolling_second_best'
+FINAL_METRIC_STRATEGY = 'rolling_avg'
 
 
 def evaluate_model_process(
@@ -40,22 +38,6 @@ if __name__ == '__main__':
         # recursively remove
         os.system('rm -rf /mnt/data3/rl-data/training_res/STANDALONE/STANDALONE')
 
-    # Gen exp info & metadata
-    #################################
-    # init exp
-    #################################
-    exp_info = get_exp_info()
-    exp_name = f'{exp_info.nni_exp_id}/{exp_info.nni_trial_id}'
-
-    saving_path = os.path.join(SAVING_PREFIX, exp_info.nni_exp_id, exp_info.nni_trial_id)
-    os.makedirs(saving_path)
-    with open(os.path.join(saving_path, 'exp_info.txt'), 'w') as f:
-        f.write(f'nni_exp_id: {exp_info.nni_exp_id}\n')
-        f.write(f'nni_trial_id: {exp_info.nni_trial_id}\n')
-        f.write(f'git_branch: {exp_info.git_branch}\n')
-        f.write(f'git_commit: {exp_info.git_commit}\n')
-        f.write(f'git_clean: {exp_info.git_clean}\n')
-
     #################################
     # set object's param on nni's next parameters
     #################################
@@ -72,6 +54,22 @@ if __name__ == '__main__':
      learner_config,
      explicit_config,
      ) = get_param_from_nni()
+
+    # Gen exp info & metadata
+    #################################
+    # init exp
+    #################################
+    exp_info = get_exp_info()
+    exp_name = f'{exp_info.nni_exp_id}/{exp_info.nni_trial_id}'
+
+    saving_path = os.path.join(SAVING_PREFIX, exp_info.nni_exp_id, exp_info.nni_trial_id)
+    os.makedirs(saving_path)
+    with open(os.path.join(saving_path, 'exp_info.txt'), 'w') as f:
+        f.write(f'nni_exp_id: {exp_info.nni_exp_id}\n')
+        f.write(f'nni_trial_id: {exp_info.nni_trial_id}\n')
+        f.write(f'git_branch: {exp_info.git_branch}\n')
+        f.write(f'git_commit: {exp_info.git_commit}\n')
+        f.write(f'git_clean: {exp_info.git_clean}\n')
 
     # init
     feature_engine = feature_engine_type(**feature_engine_param)
@@ -239,6 +237,18 @@ if __name__ == '__main__':
     elif FINAL_METRIC_STRATEGY == 'rolling_second_best':
         latest_consider_num = max(100, int(len(result_dict) * 0.1))
         best_metric = sorted(list(result_dict.values())[-latest_consider_num:], key=lambda x: x['default'])[-2]
+    elif FINAL_METRIC_STRATEGY == 'rolling_avg':
+        latest_consider_num = max(50, int(len(result_dict) * 0.1))
+        consideration_list = list(result_dict.values())[-latest_consider_num:]
+        rolling_avg_metric = {f'avg_{k}': sum([x[k] for x in consideration_list]) / len(consideration_list)
+                              for k in consideration_list[0] if k != 'model_name'}
+
+        best_metric = sorted(consideration_list, key=lambda x: x['default'])[-1]
+        for k in best_metric:
+            rolling_avg_metric[f'best_{k}'] = best_metric[k]
+        best_metric = rolling_avg_metric
+        best_metric['daily_pnl_mean_sharped'] = best_metric['avg_daily_pnl_mean_sharped']
+
     else:
         raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')
     nni.report_final_result(best_metric)

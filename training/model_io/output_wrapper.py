@@ -266,7 +266,7 @@ class RuleOutputWrapper(ModelOutputWrapper):
             price = 0
 
         action = (side, volumn, price) 
-        return action, model_input, None
+        return action, model_input, torch.zeros(3, dtype=torch.float)
 
     def random_action(self, observation, model_input) -> Tuple[ActionType, torch.tensor, torch.tensor]:
         
