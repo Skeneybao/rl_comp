@@ -33,6 +33,8 @@ class LearnerConfig:
     grad_max_norm: float = 1.
     l2_reg: float = 0.
 
+    cyclic_learning_rate: bool = False
+
     def __post_init__(self):
         self.lr = float(self.lr)
         self.l2_reg = float(self.l2_reg)
@@ -60,6 +62,7 @@ class DQNLearner(Learner):
         self.model = model.to(config.device)
         self.target_model = copy.deepcopy(model).to(config.device)
         self.optimizer = self.__get_optimizer()
+        self.lr_scheduler = self.__get_lr_scheduler(self.optimizer)
         if model_saving_path != NOT_SAVING:
             self.saving = True
             self.model_saving_path = os.path.join(model_saving_path, 'models')
@@ -99,6 +102,13 @@ class DQNLearner(Learner):
         else:
             raise ValueError(f'Unknown optimizer type: {self.config.optimizer_type}')
         return optimizer
+
+    def __get_lr_scheduler(self, optimizer):
+        if self.config.cyclic_learning_rate:
+            return torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=self.config.lr / 100, max_lr=self.config.lr,
+                                                     step_size_up=2000, cycle_momentum=False)
+        else:
+            return None
 
     @report_time(5000)
     def step(self) -> Optional[float]:
@@ -174,6 +184,8 @@ class DQNLearner(Learner):
         # grad clipping
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_max_norm)
         self.optimizer.step()
+        if self.config.cyclic_learning_rate:
+            self.lr_scheduler.step()
 
         self.step_cnt += 1
 
