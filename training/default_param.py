@@ -40,6 +40,7 @@ default_param = {
     'learner_config$l2_reg': 0.0,
     'learner_config$cyclic_learning_rate': True,
     'learner_config$reward_steps': 1,
+    'learner_config$qrdqn': False,
 
     ## explicit control param
     'signal_risk_thresh': -float('inf'),
