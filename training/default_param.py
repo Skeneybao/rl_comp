@@ -39,6 +39,7 @@ default_param = {
     'learner_config$minimal_buffer_size': 2000,
     'learner_config$l2_reg': 0.0,
     'learner_config$cyclic_learning_rate': True,
+    'learner_config$reward_steps': 1,
 
     ## explicit control param
     'signal_risk_thresh': -float('inf'),

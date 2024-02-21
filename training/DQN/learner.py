@@ -29,7 +29,7 @@ class LearnerConfig:
 
     update_target_model_step: int = 100
 
-    reward_steps: int = 5
+    reward_steps: int = 1
     grad_max_norm: float = 1.
     l2_reg: float = 0.
 
