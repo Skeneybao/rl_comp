@@ -28,6 +28,7 @@ from env.stock_raw.envs.stock_base_env_cython import StockBaseEnvCython
 from env.stock_raw.utils import Order
 from training.reward.dummy_reward import cal_reward as dummy_reward
 from training.util.tools import get_rank
+from training.model_io.env_info_appender import InfoAccumulator, EnvInfoAppender
 
 TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
 TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
@@ -35,22 +36,6 @@ TRAIN_DATA_PATH = TRAINING_DATA_5SEC
 CODE_TO_PLOT = [486.0, 218.0, 143.0, 492.0]
 
 
-@dataclass
-class InfoAccumulator:
-    sig0_queue: list = field(default_factory=list)
-    sig1_queue: list = field(default_factory=list)
-    sig2_queue: list = field(default_factory=list)
-    mid_price_queue: list = field(default_factory=list)
-    code_reward_accum: float = 0
-    daily_reward_accum: float = 0
-
-    def log(self, mid_price, sig0, sig1, sig2, reward):
-        self.sig0_queue.append(sig0)
-        self.sig1_queue.append(sig1)
-        self.sig2_queue.append(sig2)
-        self.mid_price_queue.append(mid_price)
-        self.code_reward_accum += reward
-        self.daily_reward_accum += reward
 
 
 class TrainingStockEnv(Game):
@@ -113,13 +98,14 @@ class TrainingStockEnv(Game):
         self._code_price_path = []
         self._code_reward_accum_path = []
         self._net_pnl_accum_path = []
-        self.info_acc = InfoAccumulator()
         self._current_env = None
         self._step_cnt = 0
         self._step_cnt_except_this_episode = 0
         # init as 0, for the first batch should be episode 1
         self._episode_cnt = 0
         self._reset_cnt = 0
+
+        self.env_info_appender = EnvInfoAppender(max_postion)
 
         self._last_obs = None
 
@@ -150,18 +136,12 @@ class TrainingStockEnv(Game):
         obs, done, info = self._current_env.reset()
         self._current_date_data_df = current_date_data_df
         self._current_code_data_df = self._current_date_data_df[self._current_date_data_df['code'] == obs['code']].set_index('eventTime')
- 
-        info['signal0_rank'] = 0.5
-        info['signal1_rank'] = 0.5
-        info['signal2_rank'] = 0.5
-        info['signal0_mean'] = 0
-        info['signal1_mean'] = 0
-        info['signal2_mean'] = 0
-        info['mid_price_std'] = 1
-        info['warming-up'] = True
-        info['full_pos'] = 0
+
+        info_append = self.env_info_appender.get_info(obs)
+
         info['TWAP600'] = self._current_code_data_df.loc[obs['eventTime'], 'TWAP600']
-        observation = {**obs, **info}
+
+        observation = {**obs, **info, **info_append}
         
         self._last_obs = observation
 
@@ -213,11 +193,12 @@ class TrainingStockEnv(Game):
             **twaps,
         )
         # Record all signal values for current code
-        self.info_acc.log((obs['ap0'] + obs['bp0']) / 2, obs['signal0'], obs['signal1'], obs['signal2'], reward)
+        self.env_info_appender.accumulate(
+            (obs['ap0'] + obs['bp0']) / 2, obs['signal0'], obs['signal1'], obs['signal2'], reward)
 
         if obs['code'] in self.codes_to_log:
             self._code_pos_path.append(obs['code_net_position'])
-            self._code_reward_accum_path.append(self.info_acc.code_reward_accum)
+            self._code_reward_accum_path.append(self.env_info_appender.info_acc.code_reward_accum)
             self._code_price_path.append((obs['ap0'] + obs['bp0']) / 2 / obs['ap0_t0'])
             self._net_pnl_accum_path.append(obs['code_pnl'] / obs['ap0_t0'])
         # Handling when done:
@@ -239,7 +220,8 @@ class TrainingStockEnv(Game):
                     daily_metric_writer.writerow(self._current_env.get_backtest_metric())
             self._deal_code_plot(obs['code'])
 
-            self.info_acc = InfoAccumulator()
+            self.env_info_appender.reset()
+
             self._code_pos_path = []
             self._code_price_path = []
             self._code_reward_accum_path = []
@@ -250,34 +232,10 @@ class TrainingStockEnv(Game):
             obs, reward, _ = self.reset()
             return obs, reward, done
 
-        if len(self.info_acc.sig0_queue) > 240:
-            info['signal0_rank'] = get_rank(self.info_acc.sig0_queue[-240:], obs['signal0']) / 240
-            info['signal1_rank'] = get_rank(self.info_acc.sig1_queue[-240:], obs['signal1']) / 240
-            info['signal2_rank'] = get_rank(self.info_acc.sig2_queue[-240:], obs['signal2']) / 240
-            info['signal0_mean'] = sum(self.info_acc.sig0_queue) / len(self.info_acc.sig0_queue)
-            info['signal1_mean'] = sum(self.info_acc.sig1_queue) / len(self.info_acc.sig1_queue)
-            info['signal2_mean'] = sum(self.info_acc.sig2_queue) / len(self.info_acc.sig2_queue)
-            info['mid_price_std'] = np.std(np.array(self.info_acc.mid_price_queue[-240:]) / obs['ap0_t0'])
-            info['warming-up'] = False
-        else:
-            info['signal0_rank'] = 0.5
-            info['signal1_rank'] = 0.5
-            info['signal2_rank'] = 0.5
-            info['signal0_mean'] = 0
-            info['signal1_mean'] = 0
-            info['signal2_mean'] = 0
-            info['mid_price_std'] = 1
-            info['warming-up'] = True
-
+        info_appended = self.env_info_appender.get_info(obs)
         info['TWAP600'] = self._current_code_data_df.loc[obs['eventTime'], 'TWAP600']
-        if obs['code_net_position'] == self._max_position: 
-            info['full_pos'] = 1
-        elif obs['code_net_position'] == -self._max_position: 
-            info['full_pos'] = -1
-        else:
-            info['full_pos'] = 0
 
-        observation = {**obs, **info}
+        observation = {**obs, **info, **info_appended}
         self._last_obs = observation
 
         return observation, reward, done
@@ -298,7 +256,7 @@ class TrainingStockEnv(Game):
                 'code_positional_pnl': info['code_positional_pnl'],
                 'code_handling_fee': info['code_handling_fee'],
                 'ap0_t0': info['ap0_t0'],
-                'reward': self.info_acc.code_reward_accum,
+                'reward': self.env_info_appender.info_acc.code_reward_accum,
             }
             with open(os.path.join(self.save_metric_path, 'code_metric', f"{self._current_env.date}.csv"), 'a',
                       newline='') as f:
@@ -318,7 +276,7 @@ class TrainingStockEnv(Game):
         self._code_price_path = []
         self._code_reward_accum_path = []
         self._net_pnl_accum_path = []
-        self.info_acc = InfoAccumulator(daily_reward_accum=self.info_acc.daily_reward_accum)
+        self.env_info_appender.reset(InfoAccumulator(daily_reward_accum=self.env_info_appender.info_acc.daily_reward_accum))
 
         return obs, None, info
 
