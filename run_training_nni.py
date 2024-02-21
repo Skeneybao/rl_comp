@@ -9,8 +9,6 @@ from evaluator import EvaluatorConfig, evaluate_model
 from training.DQN.actor import Actor, cal_epsilon
 from training.DQN.learner import DQNLearner
 from training.env.trainingEnv import TrainingStockEnv
-from training.replay.PRB import PrioritizedReplayBuffer
-from training.replay.ReplayBuffer import ReplayBuffer
 from training.util.exp_management import get_exp_info, get_param_from_nni
 from training.util.logger import logger
 
@@ -20,7 +18,7 @@ multiprocessing.set_start_method('spawn', force=True)
 DEFAULT_METRIC_KEY = 'daily_pnl_mean_sharped'
 
 # second_best or best
-FINAL_METRIC_STRATEGY = 'rolling_second_best'
+FINAL_METRIC_STRATEGY = 'rolling_avg'
 
 
 def evaluate_model_process(
@@ -239,6 +237,18 @@ if __name__ == '__main__':
     elif FINAL_METRIC_STRATEGY == 'rolling_second_best':
         latest_consider_num = max(100, int(len(result_dict) * 0.1))
         best_metric = sorted(list(result_dict.values())[-latest_consider_num:], key=lambda x: x['default'])[-2]
+    elif FINAL_METRIC_STRATEGY == 'rolling_avg':
+        latest_consider_num = max(50, int(len(result_dict) * 0.1))
+        consideration_list = list(result_dict.values())[-latest_consider_num:]
+        rolling_avg_metric = {f'avg_{k}': sum([x[k] for x in consideration_list]) / len(consideration_list)
+                              for k in consideration_list[0] if k != 'model_name'}
+
+        best_metric = sorted(consideration_list, key=lambda x: x['default'])[-1]
+        for k in best_metric:
+            rolling_avg_metric[f'best_{k}'] = best_metric[k]
+        best_metric = rolling_avg_metric
+        best_metric['daily_pnl_mean_sharped'] = best_metric['avg_daily_pnl_mean_sharped']
+
     else:
         raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')
     nni.report_final_result(best_metric)

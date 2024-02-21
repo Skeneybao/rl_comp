@@ -27,7 +27,7 @@ default_param = {
     ## actor config
     'actor_config$eps_start': 0.9,
     'actor_config$eps_end': 0.05,
-    'actor_config$eps_decay': 5627937.9401492765,
+    'actor_config$eps_decay': 10000000.0,
 
     ## learner config
     'learner_config$batch_size': 512,
