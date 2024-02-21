@@ -8,14 +8,18 @@ from torch import nn
 from training.DQN.actor import ActorConfig
 from training.DQN.learner import LearnerConfig
 from training.default_param import default_param
+from training.model.DNN import DNN
+from training.model.QRDNN import QRDNN
 from training.model.get_model import get_model
 from training.model_io.featureEngine import FeatureEngine
 from training.model_io.get_feature_engine import get_feature_engine_type
-from training.model_io.output_wrapper import ActionType, get_output_wrapper, ModelOutputWrapper
+from training.model_io.output_wrapper import ActionType, get_output_wrapper, ModelOutputWrapper, Action3OutputWrapper, \
+    Action3OutputQuantileWrapper
 from training.replay.ReplayBuffer import ReplayBuffer
 from training.replay.get_replay_buffer import get_replay_buffer
 from training.reward.get_reward import get_reward
 from training.util.explicit_control import ExplicitControlConf
+from training.util.logger import logger
 
 
 @dataclass
@@ -121,6 +125,19 @@ def get_param_from_nni() -> Tuple[
     explicit_config = ExplicitControlConf(
         signal_risk_thresh=params['signal_risk_thresh'],
     )
+
+
+    # deal with qr-dqn output wrapper
+    if params['learner_config$qrdqn']:
+        logger.info("qrdqn is enabled")
+        if model_type == DNN:
+            logger.info("Auto change model type from DNN to QRDNN")
+            model_type = QRDNN
+        if output_wrapper_type == Action3OutputWrapper:
+            logger.info("Auto change output wrapper type from Action3OutputWrapper to Action3OutputQuantileWrapper")
+            output_wrapper_type = Action3OutputQuantileWrapper
+        params['learner_config$lr'] = 100 * params['learner_config$lr']
+        logger.info(f"Auto change learning rate from {params['learner_config$lr'] / 1000} to {params['learner_config$lr']}")
 
     return (control_param,
             env_param,
