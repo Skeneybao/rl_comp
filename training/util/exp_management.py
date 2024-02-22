@@ -34,6 +34,9 @@ class ExpInfo:
 class ControlConf:
     training_episode_num: int
     learning_period: int
+    nn_init_exist_model: bool = False
+    nn_init_add_noise: bool = False
+    nn_init_model_path: str = ''
 
 @dataclass
 class EnvConf:
@@ -83,6 +86,9 @@ def get_param_from_nni() -> Tuple[
     control_param = ControlConf(
         training_episode_num=params['episode_num'],
         learning_period=params['learning_period'],
+        nn_init_exist_model=params['nn_init_exist_model'],
+        nn_init_add_noise=params['nn_init_add_noise'],
+        nn_init_model_path=params['nn_init_model_path'],
     )
 
     # env
