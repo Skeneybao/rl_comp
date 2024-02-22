@@ -4,6 +4,7 @@ import os
 from collections import deque
 
 import nni
+import torch
 
 from evaluator import EvaluatorConfig, evaluate_model
 from training.DQN.actor import Actor, cal_epsilon
@@ -75,6 +76,21 @@ if __name__ == '__main__':
     feature_engine = feature_engine_type(**feature_engine_param)
     model = model_type(input_dim=feature_engine.get_input_shape(), output_dim=output_wrapper_type.get_output_shape(),
                        **model_param)
+
+
+    # load existing model's param
+    if control_param.nn_init_exist_model:
+        logger.info(f'loading existing model from {control_param.nn_init_model_path}')
+        existing_model = model_type(input_dim=feature_engine.get_input_shape(), output_dim=output_wrapper_type.get_output_shape(),
+                                    **model_param)
+        existing_model.load_state_dict(torch.load(control_param.nn_init_model_path))
+        if control_param.nn_init_add_noise:
+            for current_param, existing_param in zip(model.parameters(), existing_model.parameters()):
+                current_param.data = existing_param.data + current_param.data
+        else:
+            model.load_state_dict(existing_model.state_dict())
+        del existing_model
+
     model_output_wrapper = output_wrapper_type(model, **output_wrapper_param)
     replay_buffer = replay_buffer_type(**replay_buffer_param)
 
