@@ -246,8 +246,12 @@ if __name__ == '__main__':
         best_metric = sorted(consideration_list, key=lambda x: x['default'])[-1]
         for k in best_metric:
             rolling_avg_metric[f'best_{k}'] = best_metric[k]
-        best_metric = rolling_avg_metric
+
+        all_metric = {**rolling_avg_metric, **best_metric}
+
+        best_metric = all_metric
         best_metric['daily_pnl_mean_sharped'] = best_metric['avg_daily_pnl_mean_sharped']
+        best_metric['default'] = best_metric['daily_pnl_mean_sharped']
 
     else:
         raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')
