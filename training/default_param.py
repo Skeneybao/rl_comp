@@ -2,7 +2,7 @@ default_param = {
     ## control
     'episode_num': 40_000,
     'learning_period': 32,
-    'nn_init_exist_model': False,
+    'nn_init_exist_model': True,
     'nn_init_add_noise': True,
     'nn_init_model_path': '/mnt/data3/rl-data/training_res/ue235ym1/YHxLF/models/2600000.pt',
 
