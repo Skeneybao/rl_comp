@@ -85,9 +85,6 @@ if __name__ == '__main__':
                                     **model_param)
         existing_model.load_state_dict(torch.load(control_param.nn_init_model_path)['model_state_dict'])
 
-        # force to add noise
-        control_param.nn_init_add_noise = True
-
         if control_param.nn_init_add_noise:
             for current_param, existing_param in zip(model.parameters(), existing_model.parameters()):
                 current_param.data = existing_param.data + current_param.data

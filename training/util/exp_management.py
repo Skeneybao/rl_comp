@@ -35,7 +35,7 @@ class ControlConf:
     training_episode_num: int
     learning_period: int
     nn_init_exist_model: bool = False
-    nn_init_add_noise: bool = False
+    nn_init_add_noise: bool = True
     nn_init_model_path: str = ''
 
 @dataclass
