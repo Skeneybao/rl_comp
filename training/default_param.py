@@ -28,7 +28,7 @@ default_param = {
     # 'output_wrapper$sample_param': '1'
 
     ## actor config
-    'actor_config$eps_start': 0.9,
+    'actor_config$eps_start': 0.3,
     'actor_config$eps_end': 0.05,
     'actor_config$eps_decay': 5000000.0,
 
