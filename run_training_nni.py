@@ -182,7 +182,7 @@ if __name__ == '__main__':
                     latest_model_num = learner.latest_model_num
 
                     eval_config = EvaluatorConfig(
-                        data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
+                        data_path='/mnt/data3/rl-data/train_set_nearest_5sec_val',
                         date='ALL',
                         training_res_path=saving_path,
                         model_name=f'{latest_model_num}.pt',
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     if latest_model_num != learner.latest_model_num:
         # need to evaluate last model
         eval_config = EvaluatorConfig(
-            data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
+            data_path='/mnt/data3/rl-data/train_set_nearest_5sec_val',
             date='ALL',
             training_res_path=saving_path,
             model_name=f'{learner.latest_model_num}.pt',
