@@ -3,7 +3,7 @@ default_param = {
     'episode_num': 40_000,
     'learning_period': 32,
     'nn_init_exist_model': False,
-    'nn_init_add_noise': False,
+    'nn_init_add_noise': True,
     'nn_init_model_path': '/mnt/data3/rl-data/training_res/ue235ym1/YHxLF/models/2600000.pt',
 
     ## env param
@@ -28,7 +28,7 @@ default_param = {
     # 'output_wrapper$sample_param': '1'
 
     ## actor config
-    'actor_config$eps_start': 0.9,
+    'actor_config$eps_start': 0.3,
     'actor_config$eps_end': 0.05,
     'actor_config$eps_decay': 5000000.0,
 
@@ -41,7 +41,7 @@ default_param = {
     'learner_config$model_save_step': 20000,
     'learner_config$minimal_buffer_size': 2000,
     'learner_config$l2_reg': 0.0,
-    'learner_config$cyclic_learning_rate': True,
+    'learner_config$cyclic_learning_rate': False,
     'learner_config$reward_steps': 1,
     'learner_config$qrdqn': False,
 
