@@ -80,16 +80,21 @@ if __name__ == '__main__':
 
     # load existing model's param
     if control_param.nn_init_exist_model:
+        current_weight_abs_sum = sum([param.data.abs().sum() for param in model.parameters()])
         logger.info(f'loading existing model from {control_param.nn_init_model_path}')
         existing_model = model_type(input_dim=feature_engine.get_input_shape(), output_dim=output_wrapper_type.get_output_shape(),
                                     **model_param)
         existing_model.load_state_dict(torch.load(control_param.nn_init_model_path)['model_state_dict'])
+        existing_weight_abs_sum = sum([param.data.abs().sum() for param in existing_model.parameters()])
 
         if control_param.nn_init_add_noise:
             for current_param, existing_param in zip(model.parameters(), existing_model.parameters()):
-                current_param.data = existing_param.data + current_param.data
+                current_param.data = existing_param.data * (1 + torch.randn_like(existing_param.data) * 0.1)
         else:
             model.load_state_dict(existing_model.state_dict())
+        final_weight_abs_sum = sum([param.data.abs().sum() for param in model.parameters()])
+
+        logger.info(f'current_weight_sum: {current_weight_abs_sum}, existing_weight_sum: {existing_weight_abs_sum}, final_weight_sum: {final_weight_abs_sum}')
         del existing_model
 
     model_output_wrapper = output_wrapper_type(model, **output_wrapper_param)
