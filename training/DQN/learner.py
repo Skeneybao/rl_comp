@@ -36,6 +36,8 @@ class LearnerConfig:
     qrdqn: bool = False
     kappa: float = 1.0
 
+    loss_beta: float = 1.0
+
     cyclic_learning_rate: bool = False
 
     def __post_init__(self):
@@ -181,7 +183,9 @@ class DQNLearner(Learner):
         expected_state_action_values = (next_state_values * discount_batch) + reward_batch
 
         # Huber loss
-        losses = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1), reduction='none')
+        losses = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1),
+                                  reduction='none',
+                                  beta=self.config.loss_beta)
         if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
             losses = losses * torch.tensor(loss_weights).unsqueeze(1).to(self.config.device)
             self.replay_buffer.update_weight_batch(sample_indices, losses.detach().flatten().tolist())
