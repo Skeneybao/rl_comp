@@ -108,7 +108,7 @@ class DQNLearner(Learner):
 
     def __get_lr_scheduler(self, optimizer):
         if self.config.cyclic_learning_rate:
-            return torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=self.config.lr / 100, max_lr=2 * self.config.lr,
+            return torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=self.config.lr / 10, max_lr=2 * self.config.lr,
                                                      step_size_up=2000, cycle_momentum=False)
         else:
             return None
