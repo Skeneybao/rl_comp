@@ -36,7 +36,7 @@ TRAINING_DATA_5SEC_TRAIN = '/mnt/data3/rl-data/train_set_nearest_5sec_train'
 TRAIN_DATA_PATH = TRAINING_DATA_5SEC_TRAIN
 CODE_TO_PLOT = [486.0, 218.0, 143.0, 492.0]
 
-
+logger.info(f'TRAIN_DATA_PATH: {TRAIN_DATA_PATH}')
 
 
 class TrainingStockEnv(Game):

@@ -27,6 +27,7 @@ def evaluate_model_process(
         avg_loss: float,
         model_name: int,
         result_queue: multiprocessing.Queue):
+    logger.info(f'evaluating on {eval_config}')
     metrics = evaluate_model(eval_config)
     metrics['default'] = metrics[DEFAULT_METRIC_KEY]
     result_queue.put((model_name, {**metrics, 'avg_loss': avg_loss, 'model_name': f'{model_name}.pt'}))
