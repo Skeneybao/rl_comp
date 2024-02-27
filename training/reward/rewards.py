@@ -78,6 +78,30 @@ def single_trade_return600TWAP(steps_done: int, obs_before: Dict, obs_after: Dic
     return Earn600
 
 
+@register_reward('single600T_Mod')
+def single_trade_return600TWAP(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, TWAP600: float, avg_spread: float, *args, **kwargs) -> float:
+    
+    net_pos = obs_before['code_net_position'] 
+    before_mid_price = (obs_before['ap0'] + obs_before['bp0']) / 2
+    side, vol, price = action
+    pred_cleareance_cost = avg_spread / 2
+
+    if side == 1:
+        return 0
+    elif side == 0:
+        if net_pos >= 0:
+            Earn600 = (TWAP600 - obs_before['ap0']) / obs_before['ap0_t0'] - pred_cleareance_cost
+        else:
+            Earn600 = (TWAP600 - before_mid_price) / obs_before['ap0_t0']
+    elif side == 2:
+        if net_pos <= 0:
+            Earn600 = (obs_before['bp0'] - TWAP600) / obs_before['ap0_t0'] - pred_cleareance_cost
+        else:
+            Earn600 = (before_mid_price - TWAP600) / obs_before['ap0_t0']
+
+    return Earn600
+
+
 @register_reward('single600T_scaled')
 def single_trade_return600TWAP_scaled(steps_done: int, obs_before: Dict, obs_after: Dict, action: ActionType, TWAP600: float, scale=100e-4, *args, **kwargs) -> float:
     
