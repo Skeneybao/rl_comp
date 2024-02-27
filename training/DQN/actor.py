@@ -24,6 +24,7 @@ class ActorConfig:
     eps_start: float = 0.9
     eps_end: float = 0.05
     eps_decay: float = 1000
+    minimal_buffer_size: float = 1000
 
 
 def cal_epsilon(
@@ -72,10 +73,14 @@ class Actor:
     def step(self):
         warming_up = self.this_obs['warming-up']
         if not self.this_obs['warming-up']:
-            if if_epsilon_greedy(self.config, self.env.step_cnt):
+            if len(self.replay_buffer) < self.config.minimal_buffer_size:
+                # do not record the transition if the replay buffer is not enough
                 action, _, model_output = self.output_wrapper.random_action(self.this_obs, self.this_state)
             else:
-                action, _, model_output = self.output_wrapper.select_action(self.this_obs, self.this_state)
+                if if_epsilon_greedy(self.config, self.env.step_cnt):
+                    action, _, model_output = self.output_wrapper.random_action(self.this_obs, self.this_state)
+                else:
+                    action, _, model_output = self.output_wrapper.select_action(self.this_obs, self.this_state)
 
             valid_action, is_invalid = validate_action(self.this_obs, action, max_position=self.feature_engine.max_position, signal_risk_thresh=self.explicit_config.signal_risk_thresh)
             next_obs, reward, done = self.env.step(valid_action)
@@ -84,7 +89,7 @@ class Actor:
                 self.replay_buffer.push([self.this_state, model_output, reward, next_state, done])
         else:
             action = (1, 0, 0)
-            valid_action = (1, 0 ,0)
+            valid_action = (1, 0, 0)
             model_output = torch.zeros(self.output_wrapper.get_output_shape(), dtype=torch.float)
             next_obs, reward, done = self.env.step(valid_action)
             next_state = self.feature_engine.get_feature(next_obs)
