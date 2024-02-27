@@ -171,7 +171,7 @@ if __name__ == '__main__':
             loss_acc.append(loss)
             if env.step_cnt % (1000 * control_param.learning_period) == 0:
                 loss_acc = [loss for loss in loss_acc if loss is not None]
-                avg_loss = sum(loss_acc) / len(loss_acc)
+                avg_loss = sum(loss_acc) / len(loss_acc) if len(loss_acc) > 0 else 0
                 loss_acc = []
 
                 should_eval = learner.latest_model_num is not None and latest_model_num != learner.latest_model_num
