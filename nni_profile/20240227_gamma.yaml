@@ -2,9 +2,9 @@ search_space:
   learner_config$lr:
     _type: loguniform
     _value: [ 4e-7, 6e-7 ]
-  learner_config$cyclic_learning_rate:
+  learner_config$gamma:
     _type: choice
-    _value: [ true, false ]
+    _value: [ 0.99, 0.0 ]
 
 
 trial_command: OMP_THREAD_LIMIT=4 python run_training_nni.py
