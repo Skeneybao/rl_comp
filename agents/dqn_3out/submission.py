@@ -151,12 +151,21 @@ from typing import List, Optional
 import torch
 from torch import nn
 
+
+
+class GELU(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return 0.5 * x * (1 + torch.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * torch.pow(x, 3))))
+
 activations = {
     'relu': nn.ReLU(),
     'sigmoid': nn.Sigmoid(),
     'tanh': nn.Tanh(),
     'softmax': nn.Softmax(),
-    'gelu': nn.GELU(approximate='tanh'),
+    'gelu': GELU(),
     'leaky_relu': nn.LeakyReLU(),
     'elu': nn.ELU(),
 }
