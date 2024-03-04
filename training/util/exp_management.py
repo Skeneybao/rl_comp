@@ -11,7 +11,7 @@ from training.default_param import default_param
 from training.model.DNN import DNN
 from training.model.QRDNN import QRDNN
 from training.model.get_model import get_model
-from training.model_io.featureEngine import FeatureEngine
+from training.model_io.featureEngine import FeatureEngine, FeatureEngine_single600T_Mod
 from training.model_io.get_feature_engine import get_feature_engine_type
 from training.model_io.output_wrapper import ActionType, get_output_wrapper, ModelOutputWrapper, Action3OutputWrapper, \
     Action3OutputQuantileWrapper
@@ -100,6 +100,11 @@ def get_param_from_nni() -> Tuple[
 
     # feature engine
     feature_engine_type = get_feature_engine_type(params['feature_engine_type'])
+    if params['env$reward_fn'] == 'single600T_Mod':
+        logger.warning("reward_fn == 'single600T_Mod' detected, "
+                       "auto change feature_engine_type to FeatureEngine_single600T_Mod")
+        feature_engine_type = FeatureEngine_single600T_Mod
+
     feature_engine_param = {k.replace('feature_engine$', ''): v
                             for k, v in params.items() if k.startswith('feature_engine$')}
 
