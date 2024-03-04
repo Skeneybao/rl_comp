@@ -134,7 +134,7 @@ class InfoAccumulator:
             info['signal2_mean'] = 0.
             info['mid_price_std'] = 1.
             info['warming-up'] = True
-            info['spread_avg'] = 5.0
+            info['spread_avg'] = 5e-4
 
         return info
 
