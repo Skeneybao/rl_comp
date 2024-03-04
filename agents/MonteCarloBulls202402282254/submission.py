@@ -151,8 +151,6 @@ from typing import List, Optional
 import torch
 from torch import nn
 
-
-
 class GELU(nn.Module):
     def __init__(self):
         super().__init__()
@@ -813,7 +811,7 @@ model = DNN(
     output_dim=Action3OutputWrapper.get_output_shape(),
     hidden_dim=[16, 16, 16])
 current_fp = os.path.dirname(__file__)
-checkpoint = torch.load(os.path.join(current_fp, '3000000.pt'))
+checkpoint = torch.load(os.path.join(current_fp, '2520000.pt'))
 model.load_state_dict(checkpoint['model_state_dict'])
 model_output_wrapper = Action3OutputWrapper(model)
 explicit_config = ExplicitControlConf(signal_risk_thresh=0)

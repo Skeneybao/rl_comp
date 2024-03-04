@@ -4,6 +4,7 @@ import os
 from collections import deque
 
 import nni
+import torch
 
 from evaluator import EvaluatorConfig, evaluate_model
 from training.DQN.actor import Actor, cal_epsilon
@@ -75,6 +76,27 @@ if __name__ == '__main__':
     feature_engine = feature_engine_type(**feature_engine_param)
     model = model_type(input_dim=feature_engine.get_input_shape(), output_dim=output_wrapper_type.get_output_shape(),
                        **model_param)
+
+
+    # load existing model's param
+    if control_param.nn_init_exist_model:
+        current_weight_abs_sum = sum([param.data.abs().sum() for param in model.parameters()])
+        logger.info(f'loading existing model from {control_param.nn_init_model_path}')
+        existing_model = model_type(input_dim=feature_engine.get_input_shape(), output_dim=output_wrapper_type.get_output_shape(),
+                                    **model_param)
+        existing_model.load_state_dict(torch.load(control_param.nn_init_model_path)['model_state_dict'])
+        existing_weight_abs_sum = sum([param.data.abs().sum() for param in existing_model.parameters()])
+
+        if control_param.nn_init_add_noise:
+            for current_param, existing_param in zip(model.parameters(), existing_model.parameters()):
+                current_param.data = existing_param.data * (1 + torch.randn_like(existing_param.data) * 0.1)
+        else:
+            model.load_state_dict(existing_model.state_dict())
+        final_weight_abs_sum = sum([param.data.abs().sum() for param in model.parameters()])
+
+        logger.info(f'current_weight_sum: {current_weight_abs_sum}, existing_weight_sum: {existing_weight_abs_sum}, final_weight_sum: {final_weight_abs_sum}')
+        del existing_model
+
     model_output_wrapper = output_wrapper_type(model, **output_wrapper_param)
     replay_buffer = replay_buffer_type(**replay_buffer_param)
 
@@ -160,7 +182,7 @@ if __name__ == '__main__':
                     latest_model_num = learner.latest_model_num
 
                     eval_config = EvaluatorConfig(
-                        data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
+                        data_path='/mnt/data3/rl-data/train_set_nearest_5sec_val',
                         date='ALL',
                         training_res_path=saving_path,
                         model_name=f'{latest_model_num}.pt',
@@ -204,7 +226,7 @@ if __name__ == '__main__':
     if latest_model_num != learner.latest_model_num:
         # need to evaluate last model
         eval_config = EvaluatorConfig(
-            data_path='/home/rl-comp/Git/rl_comp/env/stock_raw/data',
+            data_path='/mnt/data3/rl-data/train_set_nearest_5sec_val',
             date='ALL',
             training_res_path=saving_path,
             model_name=f'{learner.latest_model_num}.pt',
@@ -246,8 +268,12 @@ if __name__ == '__main__':
         best_metric = sorted(consideration_list, key=lambda x: x['default'])[-1]
         for k in best_metric:
             rolling_avg_metric[f'best_{k}'] = best_metric[k]
-        best_metric = rolling_avg_metric
+
+        all_metric = {**rolling_avg_metric, **best_metric}
+
+        best_metric = all_metric
         best_metric['daily_pnl_mean_sharped'] = best_metric['avg_daily_pnl_mean_sharped']
+        best_metric['default'] = best_metric['daily_pnl_mean_sharped']
 
     else:
         raise ValueError(f'Unknown FINAL_METRIC_STRATEGY: {FINAL_METRIC_STRATEGY}')

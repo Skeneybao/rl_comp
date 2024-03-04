@@ -32,7 +32,8 @@ from training.model_io.env_info_appender import InfoAccumulator, EnvInfoAppender
 
 TRAINING_RAW_DATA = '/mnt/data3/rl-data/train_set'
 TRAINING_DATA_5SEC = '/mnt/data3/rl-data/train_set_nearest_5sec/'
-TRAIN_DATA_PATH = TRAINING_DATA_5SEC
+TRAINING_DATA_5SEC_TRAIN = '/mnt/data3/rl-data/train_set_nearest_5sec_train'
+TRAIN_DATA_PATH = TRAINING_DATA_5SEC_TRAIN
 CODE_TO_PLOT = [486.0, 218.0, 143.0, 492.0]
 
 
