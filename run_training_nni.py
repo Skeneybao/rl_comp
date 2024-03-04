@@ -257,10 +257,10 @@ if __name__ == '__main__':
     elif FINAL_METRIC_STRATEGY == 'second_best':
         best_metric = sorted(result_dict.values(), key=lambda x: x['default'])[-2]
     elif FINAL_METRIC_STRATEGY == 'rolling_second_best':
-        latest_consider_num = max(100, int(len(result_dict) * 0.1))
+        latest_consider_num = min(10, int(len(result_dict) * 0.2))
         best_metric = sorted(list(result_dict.values())[-latest_consider_num:], key=lambda x: x['default'])[-2]
     elif FINAL_METRIC_STRATEGY == 'rolling_avg':
-        latest_consider_num = max(50, int(len(result_dict) * 0.1))
+        latest_consider_num = min(10, int(len(result_dict) * 0.2))
         consideration_list = list(result_dict.values())[-latest_consider_num:]
         rolling_avg_metric = {f'avg_{k}': sum([x[k] for x in consideration_list]) / len(consideration_list)
                               for k in consideration_list[0] if k != 'model_name'}
