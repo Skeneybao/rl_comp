@@ -24,7 +24,7 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(SAVING_PATH, exp_name))
 
     feature_engine = FeatureEngine_single600T_Mod(max_position=10)
-    model = FullPosDNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64], output_dim=Action3OutputWrapper.get_output_shape())
+    model = DNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64], output_dim=Action3OutputWrapper.get_output_shape())
     model_output_wrapper = Action3OutputWrapper(model)
     replay_buffer = ReplayBuffer(10000)
 
@@ -43,6 +43,7 @@ if __name__ == '__main__':
         eps_start=0.9,
         eps_end=0.05,
         eps_decay=1e6,
+        minimal_buffer_size=1000,
     )
     actor = Actor(
         env,
@@ -62,6 +63,7 @@ if __name__ == '__main__':
         device=torch.device('cpu'),
         #model_save_prefix=SAVING_PATH,
         model_save_step=20000,
+        minimal_buffer_size=1000,
     )
     learner = DQNLearner(
         learner_config,

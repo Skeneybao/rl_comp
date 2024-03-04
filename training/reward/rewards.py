@@ -98,7 +98,8 @@ def single_trade_return600TWAP_Mod(steps_done: int, obs_before: Dict, obs_after:
             Earn600 = (obs_before['bp0'] - TWAP600) / obs_before['ap0_t0'] - pred_cleareance_cost
         else:
             Earn600 = (before_mid_price - TWAP600) / obs_before['ap0_t0']
-    #print(Earn600)
+    if np.isnan(Earn600) or abs(Earn600) > 1000000:
+        print(Earn600)
     return Earn600
 
 
