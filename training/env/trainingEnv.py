@@ -191,17 +191,20 @@ class TrainingStockEnv(Game):
             obs_before=self._last_obs,
             obs_after={**obs, **info},
             action=action,
+            avg_spread=self.env_info_appender.info_acc.spread_avg.get_data(),
             **twaps,
         )
+        
         # Record all signal values for current code
         self.env_info_appender.accumulate(
-            (obs['ap0'] + obs['bp0']) / 2, obs['signal0'], obs['signal1'], obs['signal2'], reward)
+            (obs['ap0'] + obs['bp0']) / 2, (obs['ap0'] - obs['bp0']) / obs['ap0_t0'], obs['signal0'], obs['signal1'], obs['signal2'], reward)
 
         if obs['code'] in self.codes_to_log:
             self._code_pos_path.append(obs['code_net_position'])
             self._code_reward_accum_path.append(self.env_info_appender.info_acc.code_reward_accum)
             self._code_price_path.append((obs['ap0'] + obs['bp0']) / 2 / obs['ap0_t0'])
             self._net_pnl_accum_path.append(obs['code_pnl'] / obs['ap0_t0'])
+
         # Handling when done:
         # 0: not done, 1: done in this file, 2: done for this code of stock
         # when done, drop the last observation, and reset the current env, finally return the next observation
@@ -220,9 +223,7 @@ class TrainingStockEnv(Game):
                                                                         'day_total_orders_volume'])
                     daily_metric_writer.writerow(self._current_env.get_backtest_metric())
             self._deal_code_plot(obs['code'])
-
             self.env_info_appender.reset()
-
             self._code_pos_path = []
             self._code_price_path = []
             self._code_reward_accum_path = []
@@ -294,10 +295,14 @@ class TrainingStockEnv(Game):
             fig.savefig(os.path.join(self.save_metric_path, 'code_metric', f"{self._current_env.date}_{int(code)}.png"))
             plt.close(fig)
             
-    def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType, *args, **kwargs) -> float:
+    def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType, avg_spread: float, *args, **kwargs) -> float:
         assert obs_after['code'] == obs_before['code']
         try:
-            return self.reward_fn(step_this_episode, obs_before, obs_after, action, *args, **kwargs)
+            return self.reward_fn(steps_done=step_this_episode, 
+                                  obs_before=obs_before, 
+                                  obs_after=obs_after,
+                                  action=action,
+                                  avg_spread=avg_spread, *args, **kwargs)
         except ValueError as e:
             raise ValueError(f'Error in get_reward, step_this_episode: {step_this_episode}, '
                              f'obs_before: {obs_before}, obs_after: {obs_after}, action: {action}') from e

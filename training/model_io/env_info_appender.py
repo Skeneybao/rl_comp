@@ -38,6 +38,26 @@ class RollingSumAccumulator(Accumulator):
         return self.partial_sum / self.count
 
 
+class AccumulatingMeanAccumulator(Accumulator):
+    starting_point = 200 
+    def __init__(self):
+        self.partial_sum = 0
+        self.count = 0
+        self.items = []
+
+    def accumulate(self, data):
+
+        self.count += 1
+        if self.count > self.starting_point:
+            self.partial_sum += data
+            self.items.append(data)
+
+    def get_data(self):
+        if self.count <= self.starting_point:
+            return 0
+        return self.partial_sum / (self.count - self.starting_point)
+    
+
 class RollingStdAccumulator(Accumulator):
     rolling_window = 240
 
@@ -70,6 +90,7 @@ class RollingStdAccumulator(Accumulator):
 
 @dataclass
 class InfoAccumulator:
+    spread_avg: AccumulatingMeanAccumulator = field(default_factory=AccumulatingMeanAccumulator)
     sig0_queue: list = field(default_factory=list)
     sig1_queue: list = field(default_factory=list)
     sig2_queue: list = field(default_factory=list)
@@ -80,7 +101,8 @@ class InfoAccumulator:
     code_reward_accum: float = 0
     daily_reward_accum: float = 0
 
-    def log(self, mid_price, sig0, sig1, sig2, reward):
+    def log(self, mid_price, spread, sig0, sig1, sig2, reward):
+        self.spread_avg.accumulate(spread)
         self.sig0_queue.append(sig0)
         self.sig1_queue.append(sig1)
         self.sig2_queue.append(sig2)
@@ -94,6 +116,7 @@ class InfoAccumulator:
     def get_data(self, obs):
         info = {}
         if len(self.sig0_queue) > 240:
+            info['spread_avg'] = self.spread_avg.get_data()
             info['signal0_rank'] = get_rank(self.sig0_queue[-240:], obs['signal0']) / 240
             info['signal1_rank'] = get_rank(self.sig1_queue[-240:], obs['signal1']) / 240
             info['signal2_rank'] = get_rank(self.sig2_queue[-240:], obs['signal2']) / 240
@@ -111,6 +134,8 @@ class InfoAccumulator:
             info['signal2_mean'] = 0.
             info['mid_price_std'] = 1.
             info['warming-up'] = True
+            info['spread_avg'] = 5e-4
+
         return info
 
 
@@ -119,8 +144,8 @@ class EnvInfoAppender:
         self.info_acc = InfoAccumulator()
         self.max_position = max_position
 
-    def accumulate(self, mid_price, sig0, sig1, sig2, reward):
-        self.info_acc.log(mid_price, sig0, sig1, sig2, reward)
+    def accumulate(self, mid_price, spread, sig0, sig1, sig2, reward):
+        self.info_acc.log(mid_price, spread, sig0, sig1, sig2, reward)
 
     def get_info(self, obs):
         info = self.info_acc.get_data(obs)

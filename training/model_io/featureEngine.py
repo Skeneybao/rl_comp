@@ -278,4 +278,35 @@ class FeatureEngineVersion4(FeatureEngineVersion3):
     def feature_names(self):
         return ['logPrice', 'rule_des', 'sig0', 'sig1', 'sig2', 'priceStd', 'spread', ] 
 
+
+
+class FeatureEngine_single600T_Mod(FeatureEngineVersion3):
+
+    def get_input_shape(self):
+        return 9
+
+    def get_feature(self, observation) -> torch.Tensor:
+
+        mid_price = (observation['ap0'] + observation['bp0']) / 2
+
+        feature_tensor = torch.tensor([
+            self.price_log(observation),
+            self.rule_decision(observation, mid_price),
+            np.sign(observation['code_net_position']),
+            observation['signal0'],
+            observation['signal1'],
+            observation['signal2'],
+            observation['mid_price_std'],
+            observation['spread_avg'] * 1000,
+            (observation['ap0'] - observation['bp0']) / observation['ap0_t0'] * 1000,
+        ],
+            dtype=torch.float32,
+        )
+
+        return feature_tensor
+
+    @property
+    def feature_names(self):
+        return ['logPrice', 'rule_des', 'pos_direc', 'sig0', 'sig1', 'sig2', 'priceStd', 'avg_spread', 'spread', ] 
+    
 FeatureEngineDummy = FeatureEngineVersion2
