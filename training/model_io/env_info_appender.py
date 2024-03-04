@@ -18,7 +18,7 @@ class Accumulator(abc.ABC):
         pass
 
 
-class RollingSumAccumulator(Accumulator):
+class RollingAvgAccumulator(Accumulator):
     rolling_window = 240
 
     def __init__(self):
@@ -94,9 +94,9 @@ class InfoAccumulator:
     sig0_queue: list = field(default_factory=list)
     sig1_queue: list = field(default_factory=list)
     sig2_queue: list = field(default_factory=list)
-    sig0_sum: RollingSumAccumulator = field(default_factory=RollingSumAccumulator)
-    sig1_sum: RollingSumAccumulator = field(default_factory=RollingSumAccumulator)
-    sig2_sum: RollingSumAccumulator = field(default_factory=RollingSumAccumulator)
+    sig0_sum: RollingAvgAccumulator = field(default_factory=RollingAvgAccumulator)
+    sig1_sum: RollingAvgAccumulator = field(default_factory=RollingAvgAccumulator)
+    sig2_sum: RollingAvgAccumulator = field(default_factory=RollingAvgAccumulator)
     mid_price_std: RollingStdAccumulator = field(default_factory=RollingStdAccumulator)
     code_reward_accum: float = 0
     daily_reward_accum: float = 0
