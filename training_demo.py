@@ -6,11 +6,11 @@ import torch
 from training.DQN.actor import ActorConfig, Actor
 from training.DQN.learner import LearnerConfig, DQNLearner
 from training.model_io.output_wrapper import Action11OutputWrapper, Action3OutputWrapper
-from training.model_io.featureEngine import FeatureEngineVersion3_Simple
+from training.model_io.featureEngine import FeatureEngineVersion3_Simple, FeatureEngine_single600T_Mod
 from training.env.trainingEnv import TrainingStockEnv
 from training.model.DNN import DNN, FullPosDNN
 from training.replay.ReplayBuffer import ReplayBuffer
-from training.reward.rewards import scaled_net_return, single_trade_return600TWAP
+from training.reward.rewards import scaled_net_return, single_trade_return600TWAP, single_trade_return600TWAP_Mod
 from training.util.logger import logger
 from training.util.explicit_control import ExplicitControlConf
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     exp_name = f'{time.strftime("%Y%m%d:%H%M%S", time.localtime())}-{str(uuid.uuid4())[:8]}'
     os.makedirs(os.path.join(SAVING_PATH, exp_name))
 
-    feature_engine = FeatureEngineVersion3_Simple(max_position=10)
+    feature_engine = FeatureEngine_single600T_Mod(max_position=10)
     model = FullPosDNN(input_dim=feature_engine.get_input_shape(), hidden_dim=[64], output_dim=Action3OutputWrapper.get_output_shape())
     model_output_wrapper = Action3OutputWrapper(model)
     replay_buffer = ReplayBuffer(10000)
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     
     env = TrainingStockEnv(
         mode='ordered',
-        reward_fn=single_trade_return600TWAP,
+        reward_fn=single_trade_return600TWAP_Mod,
         save_metric_path=os.path.join(SAVING_PATH, exp_name),
         save_code_metric=True, 
         max_postion=feature_engine.max_position)

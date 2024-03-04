@@ -297,7 +297,11 @@ class TrainingStockEnv(Game):
     def get_reward(self, step_this_episode: int, obs_before: Dict, obs_after: Dict, action: ActionType, avg_spread: float, *args, **kwargs) -> float:
         assert obs_after['code'] == obs_before['code']
         try:
-            return self.reward_fn(step_this_episode, obs_before, obs_after, action, avg_spread, *args, **kwargs)
+            return self.reward_fn(steps_done=step_this_episode, 
+                                  obs_before=obs_before, 
+                                  obs_after=obs_after,
+                                  action=action,
+                                  avg_spread=avg_spread, *args, **kwargs)
         except ValueError as e:
             raise ValueError(f'Error in get_reward, step_this_episode: {step_this_episode}, '
                              f'obs_before: {obs_before}, obs_after: {obs_after}, action: {action}') from e
