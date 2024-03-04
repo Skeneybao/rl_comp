@@ -171,7 +171,7 @@ if __name__ == '__main__':
             loss_acc.append(loss)
             if env.step_cnt % (1000 * control_param.learning_period) == 0:
                 loss_acc = [loss for loss in loss_acc if loss is not None]
-                avg_loss = sum(loss_acc) / len(loss_acc)
+                avg_loss = sum(loss_acc) / len(loss_acc) if len(loss_acc) > 0 else 0
                 loss_acc = []
 
                 should_eval = learner.latest_model_num is not None and latest_model_num != learner.latest_model_num
@@ -257,10 +257,10 @@ if __name__ == '__main__':
     elif FINAL_METRIC_STRATEGY == 'second_best':
         best_metric = sorted(result_dict.values(), key=lambda x: x['default'])[-2]
     elif FINAL_METRIC_STRATEGY == 'rolling_second_best':
-        latest_consider_num = max(100, int(len(result_dict) * 0.1))
+        latest_consider_num = min(10, int(len(result_dict) * 0.2))
         best_metric = sorted(list(result_dict.values())[-latest_consider_num:], key=lambda x: x['default'])[-2]
     elif FINAL_METRIC_STRATEGY == 'rolling_avg':
-        latest_consider_num = max(50, int(len(result_dict) * 0.1))
+        latest_consider_num = min(10, int(len(result_dict) * 0.2))
         consideration_list = list(result_dict.values())[-latest_consider_num:]
         rolling_avg_metric = {f'avg_{k}': sum([x[k] for x in consideration_list]) / len(consideration_list)
                               for k in consideration_list[0] if k != 'model_name'}

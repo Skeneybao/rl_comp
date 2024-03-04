@@ -45,6 +45,7 @@ class LearnerConfig:
     def __post_init__(self):
         self.lr = float(self.lr)
         self.l2_reg = float(self.l2_reg)
+        self.gamma = float(self.gamma)
 
 
 class Learner(abc.ABC):
