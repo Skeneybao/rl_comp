@@ -40,6 +40,8 @@ class LearnerConfig:
 
     cyclic_learning_rate: bool = False
 
+    double_dqn: bool = False
+
     def __post_init__(self):
         self.lr = float(self.lr)
         self.l2_reg = float(self.l2_reg)
@@ -62,6 +64,7 @@ class DQNLearner(Learner):
             replay_buffer: ReplayBuffer,
             model_saving_path: str,
     ):
+        assert 0 + config.double_dqn + config.qrdqn <= 1, 'Only one of DQN, Double DQN and QR-DQN can be enabled'
         self.config = config
         self.replay_buffer = replay_buffer
         self.model = model.to(config.device)
@@ -119,6 +122,8 @@ class DQNLearner(Learner):
     def step(self) -> Optional[float]:
         if self.config.qrdqn:
             return self.step_qrdqn()
+        elif self.config.double_dqn:
+            return self.step_doubledqn()
         else:
             return self.step_dqn()
 
@@ -211,6 +216,99 @@ class DQNLearner(Learner):
 
         return loss.item()
 
+    def step_doubledqn(self) -> Optional[float]:
+        """
+        Run a single optimization step of a batch with multiple step reward using Double DQN.
+        """
+        if len(self.replay_buffer.memory) < self.config.minimal_buffer_size:
+            return None
+
+        if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
+            sequences, sample_indices, loss_weights = self.replay_buffer.sample_batched_ordered_sync(
+                int(self.config.batch_size),
+                int(self.config.reward_steps))
+        else:
+            sequences = self.replay_buffer.sample_batched_ordered(int(self.config.batch_size),
+                                                                  int(self.config.reward_steps))
+
+        # Prepare batches
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch, discount_batch = (
+            [], [], [], [], [], [])
+        for sequence in sequences:
+            # Initialize variables for n-step calculations
+            accum_reward = 0.0
+            discount = 1.0
+            final_state = sequence[-1][3]  # The next state after n steps
+            done = False
+
+            # Accumulate reward over n steps
+            for transition in sequence:
+                state, model_output, reward, _, done = transition
+                accum_reward += discount * reward
+                discount *= self.config.gamma
+                if done:
+                    final_state = transition[3]  # If done, use the terminal state
+                    break
+
+            state_batch.append(state)
+            action_batch.append(model_output)
+            reward_batch.append(accum_reward)
+            next_state_batch.append(final_state)
+            done_batch.append(done)
+            discount_batch.append(discount)
+
+        state_batch = torch.stack(state_batch).to(self.config.device)
+        action_batch = torch.stack(action_batch).argmax(1).unsqueeze(1).to(self.config.device)
+        reward_batch = torch.tensor(reward_batch).to(self.config.device)
+        next_state_batch = torch.stack(next_state_batch).to(self.config.device)
+        done_batch = torch.tensor(done_batch).to(self.config.device)
+        discount_batch = torch.tensor(discount_batch).to(self.config.device)
+
+        non_final_mask = done_batch == 0
+        non_final_next_states = next_state_batch[non_final_mask]
+
+        # Q(s_t, a)
+        state_action_values = self.model(state_batch).gather(1, action_batch)
+
+        # Use the main network to select actions in the next state
+        next_state_actions = self.model(non_final_next_states).max(1)[1].unsqueeze(1)
+
+        # V(s_{t+n}) = Q_target(s_{t+n}, argmax_a Q(s_{t+n}, a))
+        next_state_values = torch.zeros(self.config.batch_size, device=self.config.device)
+        with torch.no_grad():
+            next_state_values[non_final_mask] = (
+                self.target_model(non_final_next_states).gather(1, next_state_actions).squeeze(1).detach())
+        # expected Q values with n-step rewards
+        expected_state_action_values = (next_state_values * discount_batch) + reward_batch
+
+        # Huber loss
+        losses = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1),
+                                  reduction='none',
+                                  beta=self.config.loss_beta)
+        if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
+            losses = losses * torch.tensor(loss_weights).unsqueeze(1).to(self.config.device)
+            self.replay_buffer.update_weight_batch(sample_indices, losses.detach().flatten().tolist())
+        loss = torch.mean(losses)
+
+        # optimize
+        self.optimizer.zero_grad()
+        loss.backward()
+        # grad clipping
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_max_norm)
+        self.optimizer.step()
+
+        self.step_cnt += 1
+
+        if self.saving and self.step_cnt % self.config.model_save_step == 0:
+            path = os.path.join(self.model_saving_path, f'{self.step_cnt}.pt')
+            logger.info(f'Save model (and optimizer) at step {self.step_cnt} into {path}')
+            self.save_model(path, self.model, self.optimizer)
+            self.latest_model_num = self.step_cnt
+
+        if self.step_cnt % self.config.update_target_model_step == 0:
+            self.update_target_model()
+
+        return loss.item()
 
     def step_qrdqn(self) -> Optional[float]:
         """
