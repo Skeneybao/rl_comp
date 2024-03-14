@@ -1,33 +1,42 @@
 # Monte Carlo Bulls
 
-随缘炼丹，随缘赚钱
-
-## Runnable training demo
-
+## 环境
 ```bash
-codna activate stock-venv
-python training_demo.py
+conda create -f environment.yml
 ```
 
-## 模型存放位置
-learner参数`model_save_prefix`确定，默认为`/mnt/data3/rl-data/training_res`之下的某一目录
 
-## 调参/实验管理
+## 数据处理
 
-### 启动前准备
-- 修改实验参数，主要是调试什么参数。参考[nni_profile/test.yaml](nni_profile/test.yaml)和[nni文档](https://nni.readthedocs.io/en/latest/hpo/search_space.html)。
-    - 其中参数以`<module>$<param name>`的形式给出，如`learner_config$batch_size`，意为`learner_config`模块下的`batch_size`参数。
-      对应模块的参数将会代理至类构造函数或config类中。
-    （过程参考[该文件中`get_param_from_nni`](training/util/exp_management.py)）
-    - 默认参数在[training/default_param.py](training/default_param.py)中给出，缺省将使用这些参数。
-- 可以考虑新建一个.yaml文件
 
-### 启动实验
+### 降采样
+
+脚本: [data_processing/nearest_time.py](data_processing/nearest_time.py)
+
+- 需要修改变量`training_set`和`output_path_base`，指定输入的原始数据位置，以及输出的数据位置。
+
+### 数据集划分
+
+- 训练集包括直至20200219（包含）
+- 验证集包括20200220, 20200221, 20200224
+
+### 修改代码中的路径定义
+
+全局搜索`/mnt/data3/rl-data`，修改下面文件中的对应路径至实际路径
+- [training/default_param.py](training/default_param.py)
+- [training/util/exp_management.py](training/util/exp_management.py)
+- [training/env/trainingEnv.py](training/env/trainingEnv.py)
+- [run_training_nni.py](run_training_nni.py)
+
+## 实验
+
+在项目根目录执行
 ```bash
-nnictl create --config nni_profile/test.yaml --port 18080
+nnictl create --config nni_profile/reproduce_1.yaml --port <可用端口> 
 ```
 
-打开[http://192.168.194.52:18080](http://192.168.194.52:18080)，中间结果和最终结果看图说话。
+实验配置有两个
+- reproduce_1.yaml：相对稳定
+- reproduce_2.yaml：不稳定。同时由于训练的每一个环节都具备随机性且难以消除（模型参数初始化，epsilon-greedy选择，训练采样，cudnn行为等），期待运行十余个模型，可以出现一个稍微可用的。
 
-实验将会把模型保存到`/mnt/data3/rl-data/training_res/<exp_id>/<trial_id>`之下。
-
+可以修改`trial_concurrency`控制并发度
