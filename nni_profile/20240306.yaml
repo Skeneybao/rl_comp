@@ -1,0 +1,29 @@
+search_space:
+  learner_config$lr:
+    _type: loguniform
+    _value: [ 4e-7, 6e-7 ]
+  learner_config$reward_steps:
+    _type: choice
+    _value: [ 1, 5 ]
+  learner_config$gamma:
+    _type: choice
+    _value: [ 0.99, 0.0 ]
+  env$reward_fn:
+    _type: choice
+    _value: [ 'single600T', 'single600T_Mod' ]
+  learner_config$double_dqn:
+    _type: choice
+    _value: [ true, false ]
+
+
+trial_command: OMP_THREAD_LIMIT=4 python run_training_nni.py
+trial_code_directory: ../
+
+trial_concurrency: 1
+max_trial_number: 100
+
+tuner:
+  name: Random
+
+training_service:
+  platform: local
